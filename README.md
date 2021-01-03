@@ -1,0 +1,2 @@
+# StravaClubScoreboard
+StravaClubScoreboard description TK
