@@ -10,11 +10,9 @@ class StravaClubScoreboard {
 	// maxSpeed defined in distanceUnit/hour
 	protected array $sports = array(
 		'Ride' => array('label' => 'Ride', 'multiplyScoreBy' => 0.25),
-		'Run' => array('label' => 'Run', 'maxSpeed' => 11.0),
+		'Run'  => array('label' => 'Run', 'maxSpeed' => 12.0),
 		'Walk' => array('label' => 'Walk/Hike', 'maxSpeed' => 8.0),
 		'Hike' => array('convertTo' => 'Walk', 'maxSpeed' => 8.0),
-		'VirtualRun' => array('label' => 'Virtual Run', 'distanceLimit' => 4, 'maxSpeed' => 11.0),
-		'VirtualRide' => array('label' => 'Virtual Ride', 'multiplyScoreBy' => 0),
 	);
 
 	public array $distanceUnit = array(
@@ -24,40 +22,42 @@ class StravaClubScoreboard {
 	// Whether to count manually added activites that lack GPS data
 	public bool $allowManual = false;
 
+	// Strava API request limit
+	public int $requestLimit = 100;
+
 	protected Client $client;
-	protected $templateFunction; // can't seem to declare type callable here but that's what it is
+	protected $templateFunction; // @type callable
 	protected string $responseStorage = 'response';
 	protected string $manualStorage = 'manual';
 
 	protected int $start;
 	protected int $end;
 	protected int $requestCount = 0;
-	public int $requestLimit = 100;
 
 	protected array $clubsCache;
 	protected array $scoreCache;
 	protected array $activityCache = array();
 	protected array $activityWhitelist = array();
 
-	public function __construct(string $storageDir) {
+	public function __construct(string $storageDir): void {
 		$this->responseStorage = $storageDir.'/'.$this->responseStorage;
 		$this->manualStorage = $storageDir.'/'.$this->manualStorage;
 	}
 
-	public function setClient(Client $client) {
+	public function setClient(Client $client): void {
 		$this->client = $client;
 	}
 
-	public function setTemplateFunction (callable $function) {
+	public function setTemplateFunction (callable $function): void {
 		$this->templateFunction = $function;
 	}
 
-	// Set a valid sport and associated label and scoring rules
-	public function setSport(string $sportId, string $convertTo = null, string $label = null, int $multiplyScoreBy = null, int $distanceLimit = null, float $maxSpeed = null) {
-		if (!is_null($convertTo))
-			$sport['convertTo'] = $convertTo;
+	// Set a valid sport and optionally associated label and scoring rules
+	public function setSport(string $sportId, string $label = null, string $convertTo = null, int $multiplyScoreBy = null, int $distanceLimit = null, float $maxSpeed = null): void {
 		if (!is_null($label))
 			$sport['label'] = $label;
+		if (!is_null($convertTo))
+			$sport['convertTo'] = $convertTo;
 		if (!is_null($multiplyScoreBy))
 			$sport['multiplyScoreBy'] = $multiplyScoreBy;
 		if (!is_null($distanceLimit))
@@ -68,7 +68,7 @@ class StravaClubScoreboard {
 	}
 
 	// Append activity $id to activityWhitelist
-	public function whitelistActivity(string $id) {
+	public function whitelistActivity(string $id): void {
 		array_push($this->activityWhitelist, $id);
 	}
 
@@ -77,7 +77,7 @@ class StravaClubScoreboard {
 	}
 
 	// Downloads club info from Strava
-	public function downloadClub(int $clubId) {
+	public function downloadClub(int $clubId): void {
 		$file = $this->getInfoFilename($clubId);
 		if (!file_exists($file)) {
 			trigger_error("Retrieve club info for club $clubId save to ".basename($file));
@@ -88,7 +88,7 @@ class StravaClubScoreboard {
 	}
 
 	// Downloads activities from Strava
-	public function downloadClubActivities(int $clubId, int $start, int $end) {
+	public function downloadClubActivities(int $clubId, int $start, int $end): void {
 		/* OK so the Strava API seems to be broken, at least my experiements in Insomnia seem to show this. Findings:
 			 * Cannot have both before and after parameters set at the same time. Response == message: Bad Request, field: before after, code: both provided
 			 * page parameter does nothing. The first page is always returned
@@ -101,13 +101,10 @@ class StravaClubScoreboard {
 			if (!file_exists($file)) {
 				trigger_error("Retrieve club activities for club $clubId for date ".date('Y-m-d', $start)." save to ".basename($file));
 				$onstart = $this->getClubActivities($clubId, $start);
-				##print_r($onstart);
 				$ondayafter = $this->getClubActivities($clubId, $start + 86400);
-				##print_r($ondayafter);
 				$diff = array_udiff($onstart, $ondayafter, function ($a, $b) {
 					return strcmp(serialize($a), serialize($b));
 				});
-				##print_r($diff);
 
 				file_put_contents($file, json_encode($diff, JSON_PRETTY_PRINT));
 			}
@@ -136,17 +133,17 @@ class StravaClubScoreboard {
 		return $this->scoreCache;
 	}
 
-	// get total for $type = 'distance' 'gpsDistance' 'score' 'gpsScore' or 'moving_time'. Return value is mixed (float) or (int)
+	// get total for $type = 'distance' 'score' or 'moving_time'. Return value is mixed (float) or (int)
 	public function getTotal(string $type, int $clubId = null, string $name = null, string $sport = null) {
 		$total = $this->getTotals($clubId, $name, $sport);
 		return $total[$type];
 	}
 
-	// get array('distance', 'gpsDistance', 'score', 'gpsScore', 'moving_time') of totals, optionally filtered by input params
+	// get array('distance', 'score', 'moving_time') of totals, optionally filtered by input params
 	public function getTotals(int $clubId = null, string $name = null, string $sport = null): array {
 		$this->loadData();
 
-		$total = array('distance' => (float) 0, 'gpsDistance' => (float) 0, 'score' => (float) 0, 'gpsScore' => (float) 0, 'moving_time' => 0);
+		$total = array('distance' => (float) 0, 'score' => (float) 0, 'moving_time' => 0);
 		foreach ($this->scoreCache as $id => $club) {
 			if (is_null($clubId) || $clubId === $id) {
 				foreach ($club['athletes'] as $person => $data) {
@@ -163,15 +160,10 @@ class StravaClubScoreboard {
 			}
 		}
 
-		if (!$this->allowManual) {
-			$total['score'] = $total['gpsScore'];
-			$total['distance'] = $total['gpsDistance'];
-		}
-
 		return $total;
 	}
 
-	// get ranked list of leaders for $sport based on gpsDistance
+	// get ranked list of leaders for $sport
 	public function getSportLeaders(string $sport): array {
 		$this->loadData();
 
@@ -179,14 +171,14 @@ class StravaClubScoreboard {
 		$leaders = array();
 		foreach ($this->scoreCache as $clubId => $data) {
 			foreach ($data['athletes'] as $person => $personData) {
-				$leaders[] = array($personData['totals'][$sport]['gpsDistance'], $clubId, $person);
+				$leaders[] = array($personData['totals'][$sport]['distance'], $clubId, $person);
 			}
 		}
 		rsort($leaders);
 		return $leaders;
 	}
 
-	// get ranked list of top non-manual activities for $clubId, $name and/or $sport
+	// get ranked list of top activities for $clubId, $name and/or $sport
 	public function getTopActivities(int $clubId = null, string $name = null, string $sport = null): array {
 		$this->loadData();
 
@@ -197,7 +189,7 @@ class StravaClubScoreboard {
 				foreach ($club['athletes'] as $person => $data) {
 					if (is_null($name) || $name === $person) {
 						foreach ($data['activities'] as $activity) {
-							if ((is_null($sport) || $sport === $activity['type']) && !$this->isManual($activity)) {
+							if ((is_null($sport) || $sport === $activity['type'])) {
 								$activities[] = array($activity['score'], $activity['distance'], $id, $person, $activity['date'], $activity['name'], $activity['type']);
 							}
 						}
@@ -349,14 +341,12 @@ class StravaClubScoreboard {
 			number_format($totaltotals['distance'], 1), number_format($totaltotals['score'], 1));
 		$html[] = '</tbody></table>';
 
-		// Leaders and top activities for each sport except stupid Virtual ones
+		// Leaders and top activities for each sport
 		$leaders = array();
 		$activities = array();
 		foreach ($sports as $sport) {
-			if (stripos($sport, 'Virtual') === false) {
-				$leaders[] = $this->getSportLeadersHTML($sport);
-				$activities[] = $this->getTopActivitiesHTML($sport);
-			}
+			$leaders[] = $this->getSportLeadersHTML($sport);
+			$activities[] = $this->getTopActivitiesHTML($sport);
 		}
 
 		// Club scoreboard for each club
@@ -420,7 +410,7 @@ class StravaClubScoreboard {
 	}
 
 	// Loads data into memory from downloaded JSON responses. Calculates scores and stores as data structure of all activities grouped by club and athlete
-	protected function loadData() {
+	protected function loadData(): void {
 		if (isset($this->scoreCache)) return;
 
 		// $start and $end will be determined based on activity data received. Initialize to impossible values.
@@ -438,8 +428,8 @@ class StravaClubScoreboard {
 				$timestamp = strtotime($date);
 
 				foreach (json_decode(file_get_contents($file), true) as $activity) {
-					// Skip anything less than 2 minutes in duration, these are butt dials or people who don't realize you can delete your mistakes from Strava
-					if ($activity['moving_time'] > 120) {
+					// Skip anything less than 2 minutes in duration, and manual activities if not allowed
+					if ($activity['moving_time'] > 120 && (!$this->isManual($activity) || $this->allowManual)) {
 						$name = str_replace(' .', '', $activity['athlete']['firstname'].' '.$activity['athlete']['lastname']);
 						// Set $sport. If convertTo is set for sport, change sport, e.g. Hike => Walk. Runs slower than 17:00 mile pace are walks.
 						$sport = isset($this->sports[($activity['type'])]['convertTo']) ? $this->sports[($activity['type'])]['convertTo'] : $activity['type'];
@@ -460,18 +450,10 @@ class StravaClubScoreboard {
 
 						// Add to running totals for each athlete for each sport
 						if (isset($club[$name]['totals'][$sport])) {
-							if (!$this->isManual($activity)) {
-								$club[$name]['totals'][$sport]['gpsDistance'] += $distance;
-								$club[$name]['totals'][$sport]['gpsScore'] += $score;
-							}
 							$club[$name]['totals'][$sport]['distance'] += $distance;
 							$club[$name]['totals'][$sport]['moving_time'] += $activity['moving_time'];
 							$club[$name]['totals'][$sport]['score'] += $score;
 						} else {
-							if (!$this->isManual($activity)) {
-								$club[$name]['totals'][$sport]['gpsDistance'] = $distance;
-								$club[$name]['totals'][$sport]['gpsScore'] = $score;
-							}
 							$club[$name]['totals'][$sport]['distance'] = $distance;
 							$club[$name]['totals'][$sport]['moving_time'] = $activity['moving_time'];
 							$club[$name]['totals'][$sport]['score'] = $score;
@@ -518,7 +500,7 @@ class StravaClubScoreboard {
 		$this->end = $end;
 	}
 
-	protected function checkRequestLimit() {
+	protected function checkRequestLimit(): void {
 		if ($this->getRequestCount() > $this->requestLimit) throw new StravaClubScoreboardException("Strava 15-minute limit of ".$this->requestLimit." requests is reached");
 	}
 
@@ -587,16 +569,13 @@ class StravaClubScoreboard {
 		if (isset($this->sports[$sport]['multiplyScoreBy']))
 			$distance = (float) $distance * $this->sports[$sport]['multiplyScoreBy'];
 
-		// Now some rules that attempt to enforce basic data quality and not score obvious errors
+		// Now some rules that attempt to enforce basic data quality and exclude obvious user errors
 		if (!in_array($id, $this->activityWhitelist, true)) {
-			// zero if maxSpeed is exceeded for sport ... someone got in a vehicle or called a Ride a Walk
+			// zero if maxSpeed is exceeded for sport
 			if (!is_null($moving) && isset($this->sports[$sport]['maxSpeed']) && 3600 * $distance/$moving > $this->sports[$sport]['maxSpeed']) return (float) 0;
 
-			// zero if $elapsed > 12 hours ... someone forgot to stop Strava
-			if (!is_null($elapsed) && $elapsed > 43200) return (float) 0;
-
-			// zero if > 5 distance with moving / elapsed < 50% ... someone forgot to stop Strava and racked up a lot of miles possibly in a vehicle
-			if (!is_null($moving) && !is_null($elapsed) && $distance > 5 && $moving/$elapsed < .5) return (float) 0;
+			// zero if $elapsed > 18 hours
+			if (!is_null($elapsed) && $elapsed > 64800) return (float) 0;
 		}
 
 		return $distance;
