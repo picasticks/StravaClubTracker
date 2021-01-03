@@ -7,7 +7,7 @@
   "license": "GPL-3.0-only",
 	"require": {
 		"php": ">=7.4",
-		"basvandorst/stravaphp": "*"
+		"basvandorst/stravaphp": "dev-master"
 	},
   "minimum-stability": "stable",
   "autoload": {
