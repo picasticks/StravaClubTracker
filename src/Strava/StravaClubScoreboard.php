@@ -39,7 +39,7 @@ class StravaClubScoreboard {
 	protected array $activityCache = array();
 	protected array $activityWhitelist = array();
 
-	public function __construct(string $storageDir): void {
+	public function __construct(string $storageDir) {
 		$this->responseStorage = $storageDir.'/'.$this->responseStorage;
 		$this->manualStorage = $storageDir.'/'.$this->manualStorage;
 	}
@@ -449,14 +449,16 @@ class StravaClubScoreboard {
 						$club[$name]['activities'][] = array_merge($activity, array('type' => $sport, 'distance' => $distance, 'date' => $date, 'score' => $score, 'id' => $id));
 
 						// Add to running totals for each athlete for each sport
-						if (isset($club[$name]['totals'][$sport])) {
-							$club[$name]['totals'][$sport]['distance'] += $distance;
-							$club[$name]['totals'][$sport]['moving_time'] += $activity['moving_time'];
-							$club[$name]['totals'][$sport]['score'] += $score;
-						} else {
-							$club[$name]['totals'][$sport]['distance'] = $distance;
-							$club[$name]['totals'][$sport]['moving_time'] = $activity['moving_time'];
-							$club[$name]['totals'][$sport]['score'] = $score;
+						if (isset($this->sports[$sport])) {
+							if (isset($club[$name]['totals'][$sport])) {
+								$club[$name]['totals'][$sport]['distance'] += $distance;
+								$club[$name]['totals'][$sport]['moving_time'] += $activity['moving_time'];
+								$club[$name]['totals'][$sport]['score'] += $score;
+							} else {
+								$club[$name]['totals'][$sport]['distance'] = $distance;
+								$club[$name]['totals'][$sport]['moving_time'] = $activity['moving_time'];
+								$club[$name]['totals'][$sport]['score'] = $score;
+							}
 						}
 					}
 				}
