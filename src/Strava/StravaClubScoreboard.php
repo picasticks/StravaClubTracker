@@ -19,33 +19,25 @@ class StravaClubScoreboard {
 		'Miles' => 1609.344
 	);
 
-	// Whether to count manually added activites that lack GPS data
+	// Whether to permit and score manually added Strava activities that lack GPS data
 	public bool $allowManual = false;
 
-	// Strava API request limit
-	public int $requestLimit = 100;
-
-	protected Client $client;
 	protected $templateFunction; // @type callable
-	protected string $responseStorage = 'response';
-	protected string $manualStorage = 'manual';
 
-	protected int $start;
-	protected int $end;
-	protected int $requestCount = 0;
-
-	protected array $clubsCache;
-	protected array $scoreCache;
-	protected array $activityCache = array();
 	protected array $activityWhitelist = array();
 
-	public function __construct(string $storageDir) {
-		$this->responseStorage = $storageDir.'/'.$this->responseStorage;
-		$this->manualStorage = $storageDir.'/'.$this->manualStorage;
-	}
+	// Club and activity data
+	protected int $start;
+	protected int $end;
+	protected array $clubData;
+	protected array $resultsData;
 
-	public function setClient(Client $client): void {
-		$this->client = $client;
+	// StravaClub instance
+	protected StravaClub $data;
+
+	public function __construct(StravaClub $data) {
+		$this->data = $data;
+		$this->loadClubData();
 	}
 
 	public function setTemplateFunction (callable $function): void {
@@ -72,86 +64,33 @@ class StravaClubScoreboard {
 		array_push($this->activityWhitelist, $id);
 	}
 
-	public function getRequestCount(): int {
-		return $this->requestCount;
-	}
-
-	// Downloads club info from Strava
-	public function downloadClub(int $clubId): void {
-		$file = $this->getInfoFilename($clubId);
-		if (!file_exists($file)) {
-			trigger_error("Retrieve club info for club $clubId save to ".basename($file));
-			$this->checkRequestLimit();
-			file_put_contents($file, json_encode($this->client->getClub($clubId), JSON_PRETTY_PRINT));
-			$this->requestCount++;
-		}
-	}
-
-	// Downloads activities from Strava
-	public function downloadClubActivities(int $clubId, int $start, int $end): void {
-		/* OK so the Strava API seems to be broken, at least my experiements in Insomnia seem to show this. Findings:
-			 * Cannot have both before and after parameters set at the same time. Response == message: Bad Request, field: before after, code: both provided
-			 * page parameter does nothing. The first page is always returned
-			 * max value of per_page is 200
-
-		   As a result in this implementation we will just save as .json files all the activities that are "after" each date. Then we will have to diff the results to get results by date. Fortunately these activities are returned in chronological order (oldest first) so it's not necessary to work around the pagination issue.
-		*/
-		while ($start <= $end) {
-			$file = $this->getResponseFilename($clubId, $start);
-			if (!file_exists($file)) {
-				trigger_error("Retrieve club activities for club $clubId for date ".date('Y-m-d', $start)." save to ".basename($file));
-				$onstart = $this->getClubActivities($clubId, $start);
-				$ondayafter = $this->getClubActivities($clubId, $start + 86400);
-				$diff = array_udiff($onstart, $ondayafter, function ($a, $b) {
-					return strcmp(serialize($a), serialize($b));
-				});
-
-				file_put_contents($file, json_encode($diff, JSON_PRETTY_PRINT));
-			}
-			$start += 86400;
-		}
-	}
-
 	// Return array of (int) $id => (array) club data
 	public function getClubs(): array {
-		if (isset($this->clubsCache))
-			return $this->clubsCache;
-		$clubs = array();
-		foreach (array_diff(scandir($this->responseStorage), array('..', '.')) as $club) {
-			if (file_exists($this->responseStorage."/$club/club.json")) {
-				$club = json_decode(file_get_contents($this->responseStorage."/$club/club.json"), true);
-				$clubs[((int) $club['id'])] = $club;
-			}
-		}
-		$this->clubsCache = $clubs;
-		return $clubs;
+		return $this->clubData;
 	}
 
 	// Return data structure of all activities grouped by club and athlete
 	public function getResults(): array {
-		$this->loadData();
-		return $this->scoreCache;
+		return $this->resultsData;
 	}
 
 	// get total for $type = 'distance' 'score' or 'moving_time'. Return value is mixed (float) or (int)
 	public function getTotal(string $type, int $clubId = null, string $name = null, string $sport = null) {
-		$total = $this->getTotals($clubId, $name, $sport);
-		return $total[$type];
+		$totals = $this->getTotals($clubId, $name, $sport);
+		return $totals[$type];
 	}
 
 	// get array('distance', 'score', 'moving_time') of totals, optionally filtered by input params
 	public function getTotals(int $clubId = null, string $name = null, string $sport = null): array {
-		$this->loadData();
-
-		$total = array('distance' => (float) 0, 'score' => (float) 0, 'moving_time' => 0);
-		foreach ($this->scoreCache as $id => $club) {
+		$totals = array('distance' => (float) 0, 'score' => (float) 0, 'moving_time' => 0);
+		foreach ($this->resultsData as $id => $club) {
 			if (is_null($clubId) || $clubId === $id) {
 				foreach ($club['athletes'] as $person => $data) {
 					if (is_null($name) || $name === $person) {
 						foreach ($data['totals'] as $sporttype => $subtotals) {
 							if (is_null($sport) || $sport === $sporttype) {
-								foreach ($total as $item => $value) {
-									$total[$item] += $subtotals[$item];
+								foreach ($totals as $item => $value) {
+									$totals[$item] += $subtotals[$item];
 								}
 							}
 						}
@@ -160,16 +99,14 @@ class StravaClubScoreboard {
 			}
 		}
 
-		return $total;
+		return $totals;
 	}
 
 	// get ranked list of leaders for $sport
 	public function getSportLeaders(string $sport): array {
-		$this->loadData();
-
 		// array of total distance, clubId, person
 		$leaders = array();
-		foreach ($this->scoreCache as $clubId => $data) {
+		foreach ($this->resultsData as $clubId => $data) {
 			foreach ($data['athletes'] as $person => $personData) {
 				$leaders[] = array($personData['totals'][$sport]['distance'], $clubId, $person);
 			}
@@ -180,11 +117,9 @@ class StravaClubScoreboard {
 
 	// get ranked list of top activities for $clubId, $name and/or $sport
 	public function getTopActivities(int $clubId = null, string $name = null, string $sport = null): array {
-		$this->loadData();
-
 		// array of score, distance, clubId, person, date, name, sport
 		$activities = array();
-		foreach ($this->scoreCache as $id => $club) {
+		foreach ($this->resultsData as $id => $club) {
 			if (is_null($clubId) || $clubId === $id) {
 				foreach ($club['athletes'] as $person => $data) {
 					if (is_null($name) || $name === $person) {
@@ -212,7 +147,7 @@ class StravaClubScoreboard {
 			if ($place == $limit) break;
 			$html[] = sprintf(
 				'<tr><th><img src="%s" style="height:20px"><a href="%s">%s</a></th><td class="numeric">%s</td><td>%s</td><td>%s</td></tr>',
-				$this->filterClubImage($this->scoreCache[($row[2])]['profile_medium'], $row[2]), $this->getPersonURL($row[2], $row[3]), ucfirst($row[3]), number_format($row[1], 1), $this->formatDate($row[4]), $row[5]);
+				$this->filterClubImage($this->resultsData[($row[2])]['profile_medium'], $row[2]), $this->getPersonURL($row[2], $row[3]), ucfirst($row[3]), number_format($row[1], 1), $this->formatDate($row[4]), $row[5]);
 		}
 		$html[] = '</tbody></table></div>';
 
@@ -230,7 +165,7 @@ class StravaClubScoreboard {
 			if ($place == $limit) break;
 			$html[] = sprintf(
 				'<tr><th><img src="%s" style="height:20px"><a href="%s">%s</a></th><td class="numeric">%s</td></tr>',
-				$this->filterClubImage($this->scoreCache[($row[1])]['profile_medium'], $row[1]), $this->getPersonURL($row[1], $row[2]), ucfirst($row[2]), number_format($row[0], 1));
+				$this->filterClubImage($this->resultsData[($row[1])]['profile_medium'], $row[1]), $this->getPersonURL($row[1], $row[2]), ucfirst($row[2]), number_format($row[0], 1));
 		}
 		$html[] = '</tbody></table></div>';
 
@@ -238,13 +173,11 @@ class StravaClubScoreboard {
 	}
 
 	public function getPersonHTML(int $clubId, string $person): string {
-		$this->loadData();
-
 		$html[] = sprintf(
 			'<h3 id="%d"><a href="https://www.strava.com/clubs/%s"><img src="%s"></a> %s</h3>',
-			$clubId, (empty($this->scoreCache[$clubId]['url']) ? (string) $clubId : $this->scoreCache[$clubId]['url']), $this->filterClubImage($this->scoreCache[$clubId]['profile'], $clubId), ucfirst($person));
+			$clubId, (empty($this->resultsData[$clubId]['url']) ? (string) $clubId : $this->resultsData[$clubId]['url']), $this->filterClubImage($this->resultsData[$clubId]['profile'], $clubId), ucfirst($person));
 		$html[] = '<table class="athlete"><tbody><tr><th>Date</th><th>Event</th><th>Description</th><th class="numeric">Duration</th><th class="numeric">'.key($this->distanceUnit).'</th><th class="numeric">'.key($this->distanceUnit).' (Adjusted)</th></tr>';
-		foreach ($this->scoreCache[$clubId]['athletes'][$person]['activities'] as $activity) {
+		foreach ($this->resultsData[$clubId]['athletes'][$person]['activities'] as $activity) {
 			$html[] = sprintf(
 				'<tr title="%s"><td>%s</td><td>%s</td><td>%s</td><td class="numeric">%s</td><td class="numeric">%s</td><td class="numeric">%s</td></tr>',
 				$activity['id'], $this->formatDate($activity['date']), $this->getLabel($activity['type']), $activity['name'], $this->formatSeconds($activity['moving_time']), number_format($activity['distance'], 1), number_format($activity['score'], 1));
@@ -259,12 +192,10 @@ class StravaClubScoreboard {
 	}
 
 	public function getClubHTML(int $clubId): string {
-		$this->loadData();
-
-		$club = $this->scoreCache[$clubId];
+		$club = $this->resultsData[$clubId];
 		$html[] = sprintf(
 			'<h3 id="%d"><a href="https://www.strava.com/clubs/%s"><img src="%s"> %s</a></h3>',
-			$clubId, (empty($this->scoreCache[$clubId]['url']) ? (string) $clubId : $this->scoreCache[$clubId]['url']), $this->filterClubImage($club['profile'], $clubId), $club['name']);
+			$clubId, (empty($this->resultsData[$clubId]['url']) ? (string) $clubId : $this->resultsData[$clubId]['url']), $this->filterClubImage($club['profile'], $clubId), $club['name']);
 		$html[] = sprintf('<table class="club"><tbody><tr><th>Athlete</th><th>Event</th><th class="numeric">Hours</th><th class="numeric">%s</th><th class="numeric">Total</th><th>Top Effort</th><th class="numeric">Total (Adjusted)</th></tr>', key($this->distanceUnit));
 		foreach ($club['athletes'] as $name => $data) {
 			$rows = count($data['totals']);
@@ -303,8 +234,6 @@ class StravaClubScoreboard {
 	}
 
 	public function getScoreboardHTML(): string {
-		$this->loadData();
-
 		// Main scoreboard
 		// First, build array of which sports should be included because not all sports will have actual scored distance logged
 		$sports = array();
@@ -316,10 +245,10 @@ class StravaClubScoreboard {
 		foreach ($sports as $sport)
 			$html[] = '<th class="numeric">'.$this->getLabel($sport).'</th>';
 		$html[] = '<th class="numeric">Total</th><th class="numeric">Total (Adjusted)</th></tr>';
-		foreach (array_keys($this->scoreCache) as $place => $clubId) {
+		foreach (array_keys($this->resultsData) as $place => $clubId) {
 			$html[] = sprintf(
 				'<tr><th>%d.</th><th><img src="%s" style="height:20px"><a href="#%d">%s</a></th>',
-				$place + 1, $this->filterClubImage($this->scoreCache[$clubId]['profile_medium'], $clubId), $clubId, $this->scoreCache[$clubId]['name']);
+				$place + 1, $this->filterClubImage($this->resultsData[$clubId]['profile_medium'], $clubId), $clubId, $this->resultsData[$clubId]['name']);
 			foreach ($sports as $sport) {
 				$html[] = sprintf(
 					'<td class="numeric">%s</td>',
@@ -351,7 +280,7 @@ class StravaClubScoreboard {
 
 		// Club scoreboard for each club
 		$clubs = array();
-		foreach (array_keys($this->scoreCache) as $clubId)
+		foreach (array_keys($this->resultsData) as $clubId)
 			$clubs[] = $this->getClubHTML($clubId);
 
 		return $this->applyTemplate(array(
@@ -366,10 +295,8 @@ class StravaClubScoreboard {
 	}
 
 	public function getCSV(): string {
-		$this->loadData();
-
 		$rows = array();
-		foreach ($this->scoreCache as $clubId => $club) {
+		foreach ($this->resultsData as $clubId => $club) {
 			foreach ($club['athletes'] as $name => $data) {
 				foreach ($data['activities'] as $activity) {
 					unset($activity['athlete']['resource_state']);
@@ -393,35 +320,17 @@ class StravaClubScoreboard {
 		return implode("\n", $rows);
 	}
 
-	// Helper methods
-	// Calls getClubActivities API method and caches the result, since each response will be needed more than once by downloadClubActivities() whenever multiple days in a row are being processed (array_udiff on subsequent days) -- eliminates duplicate API calls to Strava
-	protected function getClubActivities(int $clubId, int $start): array {
-		$cacheKey = sprintf('%d%d', $clubId, $start);
-		if (isset($this->activityCache[$cacheKey])) {
-			trigger_error("Returning item for club $clubId from cache");
-			return $this->activityCache[$cacheKey];
-		}
-		trigger_error("Calling API for item for club $clubId -- not in cache");
-		$this->checkRequestLimit();
-		$response = $this->client->getClubActivities($clubId, 1, 200, $start);
-		$this->requestCount++;
-		$this->activityCache[$cacheKey] = $response;
-		return $response;
-	}
-
-	// Loads data into memory from downloaded JSON responses. Calculates scores and stores as data structure of all activities grouped by club and athlete
-	protected function loadData(): void {
-		if (isset($this->scoreCache)) return;
-
+	// Loads activity data from downloaded JSON responses. Calculates scores and stores as data structure of all activities grouped by club and athlete
+	public function loadActivityData(): void {
 		// $start and $end will be determined based on activity data received. Initialize to impossible values.
 		$start = strtotime(date('Y-m-d')) + 31536000;
 		$end = 0;
 
 		$clubs = $this->getClubs();
 		foreach (array_keys($clubs) as $clubId) {
-			$this->scoreCache[$clubId] = $clubs[$clubId];
+			$this->resultsData[$clubId] = $clubs[$clubId];
 			$club = array();
-			foreach ($this->getDataFilenames($clubId) as $file) {
+			foreach ($this->data->getDataFilenames($clubId) as $file) {
 				// Get date from filename
 				preg_match('#2[0-9]{3}-[01][0-9]-[0123][0-9]#', $file, $matches);
 				$date = $matches[0];
@@ -449,6 +358,9 @@ class StravaClubScoreboard {
 						$club[$name]['activities'][] = array_merge($activity, array('type' => $sport, 'distance' => $distance, 'date' => $date, 'score' => $score, 'id' => $id));
 
 						// Add to running totals for each athlete for each sport
+						if (!isset($club[$name]['totals']))
+							$club[$name]['totals'] = array();
+
 						if (isset($this->sports[$sport])) {
 							if (isset($club[$name]['totals'][$sport])) {
 								$club[$name]['totals'][$sport]['distance'] += $distance;
@@ -469,13 +381,13 @@ class StravaClubScoreboard {
 					$end = $timestamp;
 			}
 
-			// Re-sort activities using combination of date and original Strava order (so manual activities are interleaved in the right locations)
+			// Re-sort activities using combination of date and original Strava order (so activities contained in any manually created .json files are interleaved in the right locations)
 			foreach (array_keys($club) as $name)
 				array_multisort(array_column($club[$name]['activities'], 'date'), array_keys($club[$name]['activities']), $club[$name]['activities']);
 
 			$totals = array();
-			// Need to set scoreCache temporarily to avoid getTotal from doing endless recursion
-			$this->scoreCache[$clubId]['athletes'] = $club;
+			// Need to set resultsData temporarily to avoid getTotal from doing endless recursion
+			$this->resultsData[$clubId]['athletes'] = $club;
 			foreach (array_keys($club) as $name) {
 				$totals[$name] = $this->getTotal('score', $clubId, $name);
 				// Sort totals by names of sports alphabetically so order of totals is consistent for every athlete
@@ -494,16 +406,24 @@ class StravaClubScoreboard {
 			$totals[$clubId] = $this->getTotal('score', $clubId);
 		arsort($totals);
 
-		unset($this->scoreCache);
+		unset($this->resultsData);
 		foreach (array_keys($totals) as $clubId)
-			$this->scoreCache[$clubId] = $clubs[$clubId];
+			$this->resultsData[$clubId] = $clubs[$clubId];
 
 		$this->start = $start;
 		$this->end = $end;
 	}
 
-	protected function checkRequestLimit(): void {
-		if ($this->getRequestCount() > $this->requestLimit) throw new StravaClubScoreboardException("Strava 15-minute limit of ".$this->requestLimit." requests is reached");
+	// Helper methods
+
+	// Loads club data from disk
+	protected function loadClubData(): void {
+		$clubs = array();
+		foreach ($this->data->getClubFilenames() as $file) {
+			$club = json_decode(file_get_contents($file), true);
+			$clubs[((int) $club['id'])] = $club;
+		}
+		$this->clubData = $clubs;
 	}
 
 	// Applies array of $vars using $template
@@ -527,12 +447,6 @@ class StravaClubScoreboard {
 		case 'avatar/club/large.png':
 			return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='124' height='124' viewBox='0 0 500 500'%3E%3Cpath d='M427 73A250 250 0 1073 428 250 250 0 00427 73z'/%3E%3Cpath d='M400 400a212 212 0 11-300-300 212 212 0 01300 300z' fill='%23ff0'/%3E%3Cpath d='M289 182a29 29 0 1159 0 29 29 0 01-59 0zM157 182a29 29 0 1158 0 29 29 0 01-58 0zM363 349a14 14 0 11-26 11 88 88 0 00-82-52c-37 0-70 21-83 52a14 14 0 11-26-11c18-42 60-69 109-69 48 0 90 27 108 69z'/%3E%3C/svg%3E";
 			break;
-		default:
-			$filename = $this->getResponseDir($clubId).'/'.basename($url);
-			if (!file_exists($filename)) {
-				// Save local copy
-				file_put_contents($filename, file_get_contents($url));
-			}
 		}
 		return $url;
 	}
@@ -597,33 +511,6 @@ class StravaClubScoreboard {
 		$dir = sprintf('%s/%d', $baseDir, $clubId);
 		if (!file_exists($dir)) mkdir($dir, 0755);
 		return sprintf('%s/%s.html', $dir, preg_replace('#[\s.]#', '_', $person));
-	}
-
-	protected function getResponseDir(int $clubId): string {
-		$dir = sprintf('%s/%d', $this->responseStorage, $clubId);
-		if (!file_exists($dir)) mkdir($dir, 0700, true);
-		return $dir;
-	}
-
-	protected function getManualDir(int $clubId): string {
-		$dir = sprintf('%s/%d', $this->manualStorage, $clubId);
-		if (!file_exists($dir)) mkdir($dir, 0700, true);
-		return $dir;
-	}
-
-	protected function getInfoFilename(int $clubId): string {
-		return sprintf('%s/club.json', $this->getResponseDir($clubId));
-	}
-
-	protected function getResponseFilename(int $clubId, int $timestamp): string {
-		return sprintf('%s/results-%s.json', $this->getResponseDir($clubId), date('Y-m-d', $timestamp));
-	}
-
-	protected function getDataFilenames(int $clubId): array {
-		return array_merge(
-			glob($this->getResponseDir($clubId).'/results-*json'),
-			glob($this->getManualDir($clubId).'/*json')
-		);
 	}
 }
 
