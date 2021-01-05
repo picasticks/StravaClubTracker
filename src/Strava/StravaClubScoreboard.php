@@ -428,8 +428,8 @@ class StravaClubScoreboard {
 				$timestamp = strtotime($date);
 
 				foreach (json_decode(file_get_contents($file), true) as $activity) {
-					// Skip anything less than 2 minutes in duration, and manual activities if not allowed
-					if ($activity['moving_time'] > 120 && (!$this->isManual($activity) || $this->allowManual)) {
+					// Skip manual activities (unless permitted) and anything less than 90 seconds in duration
+					if ($activity['moving_time'] > 90 && (!$this->isManual($activity) || $this->allowManual)) {
 						$name = str_replace(' .', '', $activity['athlete']['firstname'].' '.$activity['athlete']['lastname']);
 						// Set $sport. If convertTo is set for sport, change sport, e.g. Hike => Walk. Runs slower than 17:00 mile pace are walks.
 						$sport = isset($this->sports[($activity['type'])]['convertTo']) ? $this->sports[($activity['type'])]['convertTo'] : $activity['type'];
@@ -511,7 +511,8 @@ class StravaClubScoreboard {
 		// Set some default values for $vars
 		$vars = array_merge(array(
 			'homeurl' => '../',
-			'currentDay' => ($this->end - strtotime('2020-07-28'))/86400 + 1,
+			'distanceUnit' => key($this->distanceUnit),
+			'currentDay' => ($this->end - $this->start)/86400 + 1,
 			'currentDate' => date('F j', $this->end),
 			'timestamp' => date('D, d M Y H:i T'),
 		), $vars);
@@ -550,7 +551,7 @@ class StravaClubScoreboard {
 		return sprintf(':%02d', ($seconds/60%60));
 	}
 
-	// Format YYYY-MM-DD date
+	// Reformat YYYY-MM-DD date
 	protected function formatDate(string $date): string {
 		return sprintf('%d/%d/%s', intval(substr($date, 5, 2)), intval(substr($date, -2, 2)), substr($date, 0, 4));
 	}
