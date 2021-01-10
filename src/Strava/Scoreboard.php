@@ -4,27 +4,40 @@ declare(strict_types=1);
 
 namespace picasticks\Strava;
 
-class StravaClubScoreboardException extends \Exception { }
+class ScoreboardException extends \Exception { }
 
-class StravaClubScoreboard {
-	// maxSpeed defined in distanceUnit/hour
-	protected array $sports = array(
-		'Ride' => array('label' => 'Ride', 'multiplyScoreBy' => 0.25),
-		'Run'  => array('label' => 'Run', 'maxSpeed' => 12.0),
-		'Walk' => array('label' => 'Walk/Hike', 'maxSpeed' => 8.0),
-		'Hike' => array('convertTo' => 'Walk', 'maxSpeed' => 8.0),
-	);
-
+class Scoreboard {
+	/**
+	 * @var Distance unit to use and length in meters. e.g. 'Miles' => 1609.344 or 'KM' => 1000
+	 * @type array(string 'label' => (float) meters)
+	 */
 	public array $distanceUnit = array(
 		'Miles' => 1609.344
 	);
 
-	// Whether to permit and score manually added Strava activities that lack GPS data
+	/**
+	 * @var Whether to score manually added Strava activities that lack GPS data
+	 * @type int
+	 */
 	public bool $allowManual = false;
 
-	protected $templateFunction; // @type callable
+	/**
+	 * @var Array of sports to include and scoring rules for sports. See setSport() for details. Use setSport() to override or add additional sports (or extend this class).
+	 * @type array of sport ID => attributes
+	 */
+	protected array $sports = array();
 
+	/**
+	 * @var Whitelist of activities that should be scored and bypass sanity checks
+	 * @type array of activity IDs
+	 */
 	protected array $activityWhitelist = array();
+
+	/**
+	 * @var template function/method
+	 * @type callable
+	 */
+	protected $templateFunction;
 
 	// Club and activity data
 	protected int $start;
@@ -32,20 +45,43 @@ class StravaClubScoreboard {
 	protected array $clubData;
 	protected array $resultsData;
 
-	// StravaClub instance
-	protected StravaClub $data;
+	// Club instance
+	protected Club $data;
 
-	public function __construct(StravaClub $data) {
+	/**
+	 * Constructor
+	 *
+	 * @param Club $data Club instance object
+	 */
+	public function __construct(Club $data) {
 		$this->data = $data;
 		$this->loadClubData();
 	}
 
+	/**
+	 * Set template function
+	 *
+	 * @param callable $function callable to apply array of template variables to template
+	 *
+	 * @return void
+	 */
 	public function setTemplateFunction (callable $function): void {
 		$this->templateFunction = $function;
 	}
 
-	// Set a valid sport and optionally associated label and scoring rules
-	public function setSport(string $sportId, string $label = null, string $convertTo = null, int $multiplyScoreBy = null, int $distanceLimit = null, float $maxSpeed = null): void {
+	/**
+	 * Add or set the label and scoring rules for a sport
+	 *
+	 * @param string $sportId sport ID
+	 * @param string $label (optional) to use for sport name in formatted output
+	 * @param string $convertTo (optional) sport ID of another sport to which this sport ID's activities should be converted. Use to combine multiple Strava sports together for simplified reporting, e.g. "Walk" and "Hike"
+	 * @param float $multiplyScoreBy (optional) Multiplier to apply to distance to compute score. e.g. setting Ride to 0.25 and Walk to 1 means each Walk mile is scored the same as 4 Ride miles.
+	 * @param float $maxSpeed (optional) Maximum speed for a single activity for a sport, in distance units per hour
+	 * @param float $distanceLimit (optional) Hard distance limit for a single activity for a sport
+	 *
+	 * @return void
+	 */
+	public function setSport(string $sportId, string $label = null, string $convertTo = null, float $multiplyScoreBy = null, float $maxSpeed = null, float $distanceLimit = null): void {
 		if (!is_null($label))
 			$sport['label'] = $label;
 		if (!is_null($convertTo))
@@ -59,34 +95,69 @@ class StravaClubScoreboard {
 		$this->sports[$sportId] = $sport;
 	}
 
-	// Append activity $id to activityWhitelist
+	/**
+	 * Add activity to activity whitelist
+	 *
+	 * Whitelisted activities are always scored, bypassing sanity checks
+	 *
+	 * @param string $id activity ID
+	 *
+	 * @return void
+	 */
 	public function whitelistActivity(string $id): void {
 		array_push($this->activityWhitelist, $id);
 	}
 
-	// Return array of (int) $id => (array) club data
+	/**
+	 * Return array of clubs and club attributes
+	 *
+	 * @return array of (int) clubId => (array) club attributes
+	 */
 	public function getClubs(): array {
 		return $this->clubData;
 	}
 
-	// Return data structure of all activities grouped by club and athlete
+	/**
+	 * Return hierarchical data structure of all activities grouped by club and athlete
+	 *
+	 * @return array of activity data
+	 */
 	public function getResults(): array {
 		return $this->resultsData;
 	}
 
-	// get total for $type = 'distance' 'score' or 'moving_time'. Return value is mixed (float) or (int)
-	public function getTotal(string $type, int $clubId = null, string $name = null, string $sport = null) {
-		$totals = $this->getTotals($clubId, $name, $sport);
+	/**
+	 * Get total distance, score or moving time
+	 *
+	 * @param string $type 'distance' 'score' or 'moving_time'
+	 * @param int $clubId (optional) Club ID
+	 * @param string $person (optional) person name
+	 * @param string $sport (optional) sport ID
+	 *
+	 * @return mixed (float) distance or score, (int) moving_time
+	 */
+	public function getTotal(string $type, int $clubId = null, string $person = null, string $sport = null) {
+		$totals = $this->getTotals($clubId, $person, $sport);
 		return $totals[$type];
 	}
 
-	// get array('distance', 'score', 'moving_time') of totals, optionally filtered by input params
-	public function getTotals(int $clubId = null, string $name = null, string $sport = null): array {
+	/**
+	 * Get total distance, score and moving time
+	 *
+	 * Optionally filter by club, person and sport
+	 *
+	 * @param int $clubId (optional) Club ID
+	 * @param string $person (optional) person name
+	 * @param string $sport (optional) sport ID
+	 *
+	 * @return array of: distance, score, moving_time totals
+	 */
+	public function getTotals(int $clubId = null, string $person = null, string $sport = null): array {
 		$totals = array('distance' => (float) 0, 'score' => (float) 0, 'moving_time' => 0);
 		foreach ($this->resultsData as $id => $club) {
 			if (is_null($clubId) || $clubId === $id) {
-				foreach ($club['athletes'] as $person => $data) {
-					if (is_null($name) || $name === $person) {
+				foreach ($club['athletes'] as $personName => $data) {
+					if (is_null($person) || $person === $personName) {
 						foreach ($data['totals'] as $sporttype => $subtotals) {
 							if (is_null($sport) || $sport === $sporttype) {
 								foreach ($totals as $item => $value) {
@@ -102,9 +173,14 @@ class StravaClubScoreboard {
 		return $totals;
 	}
 
-	// get ranked list of leaders for $sport
+	/**
+	 * Get ranked list of leaders for a sport/activity type
+	 *
+	 * @param string $sport sport ID
+	 *
+	 * @return array of: total distance, clubId, person name
+	 */
 	public function getSportLeaders(string $sport): array {
-		// array of total distance, clubId, person
 		$leaders = array();
 		foreach ($this->resultsData as $clubId => $data) {
 			foreach ($data['athletes'] as $person => $personData) {
@@ -115,17 +191,26 @@ class StravaClubScoreboard {
 		return $leaders;
 	}
 
-	// get ranked list of top activities for $clubId, $name and/or $sport
-	public function getTopActivities(int $clubId = null, string $name = null, string $sport = null): array {
-		// array of score, distance, clubId, person, date, name, sport
+	/**
+	 * Get ranked list of top activities
+	 *
+	 * Optionally filter by club, person and sport
+	 *
+	 * @param int $clubId (optional) Club ID
+	 * @param string $person (optional) person name
+	 * @param string $sport (optional) sport ID
+	 *
+	 * @return array of activity data: score, distance, clubId, person name, date, activity name, sport
+	 */
+	public function getTopActivities(int $clubId = null, string $person = null, string $sport = null): array {
 		$activities = array();
 		foreach ($this->resultsData as $id => $club) {
 			if (is_null($clubId) || $clubId === $id) {
-				foreach ($club['athletes'] as $person => $data) {
-					if (is_null($name) || $name === $person) {
+				foreach ($club['athletes'] as $personName => $data) {
+					if (is_null($person) || $person === $personName) {
 						foreach ($data['activities'] as $activity) {
 							if ((is_null($sport) || $sport === $activity['type'])) {
-								$activities[] = array($activity['score'], $activity['distance'], $id, $person, $activity['date'], $activity['name'], $activity['type']);
+								$activities[] = array($activity['score'], $activity['distance'], $id, $personName, $activity['date'], $activity['name'], $activity['type']);
 							}
 						}
 					}
@@ -136,6 +221,16 @@ class StravaClubScoreboard {
 		return $activities;
 	}
 
+	/**
+	 * Returns HTML table of top performances for a sport/activity type
+	 *
+	 * Applies template name 'activities'
+	 *
+	 * @param string $sport sport ID
+	 * @param int $limit (optional) number of athletes to include (defaults to top 5)
+	 *
+	 * @return string HTML
+	 */
 	public function getTopActivitiesHTML(string $sport, int $limit = 5): string {
 		$activities = $this->getTopActivities(null, null, $sport);
 
@@ -154,6 +249,16 @@ class StravaClubScoreboard {
 		return $this->applyTemplate(array('content' => implode("\n", $html)), 'activities');
 	}
 
+	/**
+	 * Returns HTML table of leaders for a sport
+	 *
+	 * Applies template name 'leaders'
+	 *
+	 * @param string $sport sport ID
+	 * @param int $limit (optional) number of athletes to include (defaults to top 5)
+	 *
+	 * @return string HTML
+	 */
 	public function getSportLeadersHTML(string $sport, int $limit = 5): string {
 		$leaders = $this->getSportLeaders($sport);
 
@@ -172,6 +277,16 @@ class StravaClubScoreboard {
 		return $this->applyTemplate(array('content' => implode("\n", $html)), 'leaders');
 	}
 
+	/**
+	 * Returns HTML activty log for a single athlete
+	 *
+	 * Applies template name 'person'
+	 *
+	 * @param int $clubId Club ID
+	 * @param string $person person name
+	 *
+	 * @return string HTML
+	 */
 	public function getPersonHTML(int $clubId, string $person): string {
 		$html[] = sprintf(
 			'<h3 id="%d"><a href="https://www.strava.com/clubs/%s"><img src="%s"></a> %s</h3>',
@@ -191,6 +306,15 @@ class StravaClubScoreboard {
 		return $this->applyTemplate(array('content' => implode("\n", $html)), 'person');
 	}
 
+	/**
+	 * Returns HTML club roster and totals for a club
+	 *
+	 * Applies template name 'club'
+	 *
+	 * @param int $clubId Club ID
+	 *
+	 * @return string HTML
+	 */
 	public function getClubHTML(int $clubId): string {
 		$club = $this->resultsData[$clubId];
 		$html[] = sprintf(
@@ -202,9 +326,13 @@ class StravaClubScoreboard {
 			$html[] = '<tr><th rowspan="'.$rows.'"><a href="'.$this->getPersonURL($clubId, $name).'">'.ucfirst($name).'</a></th>';
 			$row = 1;
 			foreach ($data['totals'] as $sport => $totals) {
+				if ($row > 1)
+					$html[] = '<tr>';
+
 				$html[] = sprintf(
 					'<td>%s</td><td class="numeric">%s</td><td class="numeric">%s</td>',
 					$this->getLabel($sport), $this->formatMinutes($totals['moving_time']), number_format($totals['distance'], 1));
+
 				if ($row == 1) {
 					$activities = $this->getTopActivities($clubId, $name);
 					if (count($activities) > 0) {
@@ -233,6 +361,15 @@ class StravaClubScoreboard {
 		return $this->applyTemplate(array('content' => implode("\n", $html)), 'club');
 	}
 
+	/**
+	 * Returns HTML club scoreboard
+	 *
+	 * Includes standings, top individual performances, club totals
+	 *
+	 * Applies template name 'scoreboard'
+	 *
+	 * @return string HTML
+	 */
 	public function getScoreboardHTML(): string {
 		// Main scoreboard
 		// First, build array of which sports should be included because not all sports will have actual scored distance logged
@@ -294,6 +431,13 @@ class StravaClubScoreboard {
 		), 'scoreboard');
 	}
 
+	/**
+	 * Returns all activity data in CSV format
+	 *
+	 * Includes header row
+	 *
+	 * @return string CSV-formatted data export
+	 */
 	public function getCSV(): string {
 		$rows = array();
 		foreach ($this->resultsData as $clubId => $club) {
@@ -320,9 +464,17 @@ class StravaClubScoreboard {
 		return implode("\n", $rows);
 	}
 
-	// Loads activity data from downloaded JSON responses. Calculates scores and stores as data structure of all activities grouped by club and athlete
+	/**
+	 * Load activity data from disk (downloaded JSON responses)
+	 *
+	 * Calculates scores and stores as hierarchical data structure of all activities grouped by club and athlete.
+	 *
+	 * Sets $this->start and $this->end using activity dates.
+	 *
+	 * @return void
+	 */
 	public function loadActivityData(): void {
-		// $start and $end will be determined based on activity data received. Initialize to impossible values.
+		// $start and $end timestamps will be determined based on activity data received. Initialize to impossible values.
 		$start = strtotime(date('Y-m-d')) + 31536000;
 		$end = 0;
 
@@ -330,17 +482,14 @@ class StravaClubScoreboard {
 		foreach (array_keys($clubs) as $clubId) {
 			$this->resultsData[$clubId] = $clubs[$clubId];
 			$club = array();
-			foreach ($this->data->getDataFilenames($clubId) as $file) {
-				// Get date from filename
-				preg_match('#2[0-9]{3}-[01][0-9]-[0123][0-9]#', $file, $matches);
-				$date = $matches[0];
-				$timestamp = strtotime($date);
-
+			foreach ($this->data->getDataFilenames($clubId) as $file => $timestamp) {
+				$date = date('Y-m-d', $timestamp);
 				foreach (json_decode(file_get_contents($file), true) as $activity) {
 					// Skip manual activities (unless permitted) and anything less than 90 seconds in duration
 					if ($activity['moving_time'] > 90 && (!$this->isManual($activity) || $this->allowManual)) {
 						$name = str_replace(' .', '', $activity['athlete']['firstname'].' '.$activity['athlete']['lastname']);
-						// Set $sport. If convertTo is set for sport, change sport, e.g. Hike => Walk. Runs slower than 17:00 mile pace are walks.
+
+						// Set $sport. If convertTo is set for sport, change sport, e.g. Hike => Walk. Also convert runs slower than 17:00 mile pace to walks.
 						$sport = isset($this->sports[($activity['type'])]['convertTo']) ? $this->sports[($activity['type'])]['convertTo'] : $activity['type'];
 						if ($sport == 'Run' && $activity['distance']/$activity['moving_time'] < 5700/3600)
 							$sport = 'Walk';
@@ -416,7 +565,11 @@ class StravaClubScoreboard {
 
 	// Helper methods
 
-	// Loads club data from disk
+	/**
+	 * Load club data from disk
+	 *
+	 * @return void
+	 */
 	protected function loadClubData(): void {
 		$clubs = array();
 		foreach ($this->data->getClubFilenames() as $file) {
@@ -426,7 +579,14 @@ class StravaClubScoreboard {
 		$this->clubData = $clubs;
 	}
 
-	// Applies array of $vars using $template
+	/**
+	 * Applies array of variables to $template
+	 *
+	 * @param array $vars (optional) map of variables to apply
+	 * @param string $template name or identifier of template
+	 *
+	 * @return string output
+	 */
 	protected function applyTemplate(array $vars = array(), string $template): string {
 		// Set some default values for $vars
 		$vars = array_merge(array(
@@ -439,43 +599,93 @@ class StravaClubScoreboard {
 		return call_user_func($this->templateFunction, $vars, $template);
 	}
 
+	/**
+	 * Filters image URLs returned by Strava
+	 *
+	 * Used to replace Strava placeholder .png images with a :( data URI
+	 *
+	 * @param string $url image URL
+	 * @param int $clubId Club ID
+	 *
+	 * @return string image URL
+	 */
 	protected function filterClubImage(string $url, int $clubId): string {
+		$sadface = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='{size}' height='{size}' viewBox='0 0 500 500'%3E%3Cpath d='M427 73A250 250 0 1073 428 250 250 0 00427 73z'/%3E%3Cpath d='M400 400a212 212 0 11-300-300 212 212 0 01300 300z' fill='%23ff0'/%3E%3Cpath d='M289 182a29 29 0 1159 0 29 29 0 01-59 0zM157 182a29 29 0 1158 0 29 29 0 01-58 0zM363 349a14 14 0 11-26 11 88 88 0 00-82-52c-37 0-70 21-83 52a14 14 0 11-26-11c18-42 60-69 109-69 48 0 90 27 108 69z'/%3E%3C/svg%3E";
+
 		switch ($url) {
 		case 'avatar/club/medium.png':
-			return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 500 500'%3E%3Cpath d='M427 73A250 250 0 1073 428 250 250 0 00427 73z'/%3E%3Cpath d='M400 400a212 212 0 11-300-300 212 212 0 01300 300z' fill='%23ff0'/%3E%3Cpath d='M289 182a29 29 0 1159 0 29 29 0 01-59 0zM157 182a29 29 0 1158 0 29 29 0 01-58 0zM363 349a14 14 0 11-26 11 88 88 0 00-82-52c-37 0-70 21-83 52a14 14 0 11-26-11c18-42 60-69 109-69 48 0 90 27 108 69z'/%3E%3C/svg%3E";
+			return str_replace('{size}', '60', $sadface);
 			break;
 		case 'avatar/club/large.png':
-			return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='124' height='124' viewBox='0 0 500 500'%3E%3Cpath d='M427 73A250 250 0 1073 428 250 250 0 00427 73z'/%3E%3Cpath d='M400 400a212 212 0 11-300-300 212 212 0 01300 300z' fill='%23ff0'/%3E%3Cpath d='M289 182a29 29 0 1159 0 29 29 0 01-59 0zM157 182a29 29 0 1158 0 29 29 0 01-58 0zM363 349a14 14 0 11-26 11 88 88 0 00-82-52c-37 0-70 21-83 52a14 14 0 11-26-11c18-42 60-69 109-69 48 0 90 27 108 69z'/%3E%3C/svg%3E";
+			return str_replace('{size}', '124', $sadface);
 			break;
 		}
 		return $url;
 	}
 
-	// Format $seconds as h:mm:ss or mm:ss if less than one hour
+	/**
+	 * Format seconds, used for single activities
+	 *
+	 * Formats as h:mm:ss, or mm:ss when duration is less than one hour
+	 *
+	 * @param int $seconds activity duration in seconds
+	 *
+	 * @return string formatted duration
+	 */
 	protected function formatSeconds(int $seconds): string {
 		if ($seconds >= 3600)
 			return sprintf('%01d:%02d:%02d', ($seconds/3600),($seconds/60%60), $seconds%60);
 		return sprintf('%02d:%02d', ($seconds/60%60), $seconds%60);
 	}
 
-	// Format $seconds as h:mm or :mm if less than one hour
+	/**
+	 * Format minutes, used for totals
+	 *
+	 * Formats as h:mm, or :mm when duration is less than one hour
+	 *
+	 * @param int $seconds duration in seconds
+	 *
+	 * @return string formatted duration
+	 */
 	protected function formatMinutes(int $seconds): string {
 		if ($seconds >= 3600)
 			return sprintf('%01d:%02d', ($seconds/3600),($seconds/60%60));
 		return sprintf(':%02d', ($seconds/60%60));
 	}
 
-	// Reformat YYYY-MM-DD date
+	/**
+	 * Reformats YYYY-MM-DD date as MM/DD/YYYY
+	 *
+	 * @param string $date in YYYY-MM-DD
+	 *
+	 * @return string date as MM/DD/YYYY
+	 */
 	protected function formatDate(string $date): string {
 		return sprintf('%d/%d/%s', intval(substr($date, 5, 2)), intval(substr($date, -2, 2)), substr($date, 0, 4));
 	}
 
-	// Return label for a sport
+	/**
+	 * Return label for sport
+	 *
+	 * @param string $sportId Sport ID
+	 *
+	 * @return string label
+	 */
 	protected function getLabel(string $sportId): string {
-		return isset($this->sports[$sportId]) ? $this->sports[$sportId]['label'] : $sportId;
+		return !is_null($this->sports[$sportId]['label']) ? $this->sports[$sportId]['label'] : $sportId;
 	}
 
-	// Calculate score for an activity based on $distance and $sport
+	/**
+	 * Calculate score for an activity based on distance, sport, moving and elapsed time
+	 *
+	 * @param string $id activity ID
+	 * @param float $distance distance in distance units
+	 * @param string $sport sport ID
+	 * @param int $moving (optional) moving time in seconds
+	 * @param int $elapsed (optional) elapsed time in seconds
+	 *
+	 * @return float score for activity
+	 */
 	protected function computeScore(string $id, float $distance, string $sport, int $moving = null, int $elapsed = null): float {
 		if (!isset($this->sports[$sport]))
 			return (float) 0;
@@ -498,18 +708,43 @@ class StravaClubScoreboard {
 		return $distance;
 	}
 
+	/**
+	 * Return whether activity was manually added to Strava or is based on actual GPS data
+	 *
+	 * @param array $activity activity data
+	 *
+	 * @return bool true if activity was manually added, false if it contains recorded GPS data
+	 */
 	protected function isManual(array $activity): bool {
 		return $activity['total_elevation_gain'] == 0 && $activity['moving_time'] == $activity['elapsed_time'];
 	}
 
+	/**
+	 * Get URL for HTML page showing person activity details
+	 *
+	 * @param int $clubId Club ID
+	 * @param string $person person name
+	 *
+	 * @return string relative URL
+	 */
 	protected function getPersonURL(int $clubId, string $person): string {
 		$dir = sprintf('%d', $clubId);
 		return sprintf('%s/%s.html', $dir, preg_replace('#[\s.]#', '_', $person));
 	}
 
+	/**
+	 * Get filesystem path for HTML page showing person activity details
+	 *
+	 * @param string $baseDir Filesystem base directory
+	 * @param int $clubId Club ID
+	 * @param string $person person name
+	 *
+	 * @return string filename
+	 */
 	public function getPersonHTMLFilename(string $baseDir, int $clubId, string $person): string {
 		$dir = sprintf('%s/%d', $baseDir, $clubId);
-		if (!file_exists($dir)) mkdir($dir, 0755);
+		if (!file_exists($dir))
+			mkdir($dir, 0755);
 		return sprintf('%s/%s.html', $dir, preg_replace('#[\s.]#', '_', $person));
 	}
 }
