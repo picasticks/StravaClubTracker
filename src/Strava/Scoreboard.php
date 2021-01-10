@@ -22,7 +22,7 @@ class Scoreboard {
 	public bool $allowManual = false;
 
 	/**
-	 * @var Array of sports to include and scoring rules for sports. See setSport() for details. Use setSport() to override or add additional sports (or extend this class).
+	 * @var Array of sports to include and scoring rules for sports
 	 * @type array of sport ID => attributes
 	 */
 	protected array $sports = array();
@@ -70,28 +70,36 @@ class Scoreboard {
 	}
 
 	/**
-	 * Add or set the label and scoring rules for a sport
+	 * Add or set a sport, including label and scoring rules
+	 *
+	 * Attributes may include:
+	 *   string $label (optional) to use for sport name in formatted output (if not set, $sportId is used).
+	 *   string $convertTo (optional) sport ID of another sport to which this sport ID's activities should be converted. Use to combine multiple Strava sports together for simplified reporting, e.g. to merge "Walk" and "Hike".
+	 *   float $multiplyScoreBy (optional) Multiplier to apply to distance to compute score. e.g. setting Ride to 0.25 and Walk to 1 means each Walk mile is scored the same as 4 Ride miles.
+	 *   float $maxSpeed (optional) Maximum speed for a single activity for a sport, in distance units per hour. Activities that exceed this limit are scored as 0.
+	 *   float $distanceLimit (optional) Hard distance limit for a single activity for a sport. Activities that exceed this limit are scored as $distanceLimit.
 	 *
 	 * @param string $sportId sport ID
-	 * @param string $label (optional) to use for sport name in formatted output
-	 * @param string $convertTo (optional) sport ID of another sport to which this sport ID's activities should be converted. Use to combine multiple Strava sports together for simplified reporting, e.g. "Walk" and "Hike"
-	 * @param float $multiplyScoreBy (optional) Multiplier to apply to distance to compute score. e.g. setting Ride to 0.25 and Walk to 1 means each Walk mile is scored the same as 4 Ride miles.
-	 * @param float $maxSpeed (optional) Maximum speed for a single activity for a sport, in distance units per hour
-	 * @param float $distanceLimit (optional) Hard distance limit for a single activity for a sport
+	 * @param array $attributes (optional)
 	 *
 	 * @return void
 	 */
-	public function setSport(string $sportId, string $label = null, string $convertTo = null, float $multiplyScoreBy = null, float $maxSpeed = null, float $distanceLimit = null): void {
-		if (!is_null($label))
-			$sport['label'] = $label;
-		if (!is_null($convertTo))
-			$sport['convertTo'] = $convertTo;
-		if (!is_null($multiplyScoreBy))
-			$sport['multiplyScoreBy'] = $multiplyScoreBy;
-		if (!is_null($distanceLimit))
-			$sport['distanceLimit'] = $distanceLimit;
-		if (!is_null($maxSpeed))
-			$sport['maxSpeed'] = $maxSpeed;
+	public function setSport(string $sportId, array $attributes = array()): void {
+		$types = array(
+			'label' => 'string',
+			'convertTo' => 'string',
+			'multiplyScoreBy' => 'float',
+			'maxSpeed' => 'float',
+			'distanceLimit' => 'float',
+		);
+
+		$sport = array();
+		foreach ($types as $name => $type) {
+			if (isset($attributes[$name])) {
+				settype($attributes[$name], $type);
+				$sport[$name] = $attributes[$name];
+			}
+		}
 		$this->sports[$sportId] = $sport;
 	}
 
