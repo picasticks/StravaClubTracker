@@ -376,7 +376,7 @@ class ClubTracker {
 	 *
 	 * Includes standings, top individual performances, club totals
 	 *
-	 * Applies template name 'summary'
+	 * Applies template name 'index'
 	 *
 	 * @return string HTML
 	 */
@@ -438,7 +438,7 @@ class ClubTracker {
 			'leaders' => implode("\n", $leaders),
 			'activities' => implode("\n", $activities),
 			'clubs' => implode("\n", $clubs),
-		), 'summary');
+		), 'index');
 	}
 
 	/**
