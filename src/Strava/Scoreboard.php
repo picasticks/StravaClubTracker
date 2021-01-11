@@ -278,7 +278,7 @@ class Scoreboard {
 			if ($place == $limit) break;
 			$html[] = sprintf(
 				'<tr><th><img alt="logo" src="%s" style="height:20px"><a href="%s">%s</a></th><td class="numeric">%s</td></tr>',
-				$this->filterClubImage($this->resultsData[($row[1])]['profile_medium'], $row[1]), $this->getPersonURL($row[1], $row[2]), ucfirst($row[2]), number_format($row[0], 1));
+				$this->filterClubImage($this->resultsData[($row[1])]['profile_medium'], $row[1]), $this->getPersonURL($row[1], $row[2]), ucfirst($row[2]), is_null($row[0]) ? '0' : number_format($row[0], 1));
 		}
 		$html[] = '</tbody></table></div>';
 
