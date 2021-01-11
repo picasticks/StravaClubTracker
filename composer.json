@@ -1,9 +1,9 @@
 {
-	"name": "picasticks/stravaclubscoreboard",
-	"description": "Strava Club progress tracker/dashboard generator, uses StravaPHP with the Strava API",
+	"name": "picasticks/stravaclubtracker",
+	"description": "Progress tracker/dashboard generator for Strava Clubs that shows club totals, top efforts, individual leaders and club details",
   "type": "library",
   "keywords": ["Strava"],
-  "homepage": "https://github.com/picasticks/StravaClubScoreboard",
+  "homepage": "https://github.com/picasticks/StravaClubTracker",
   "license": "GPL-3.0-only",
 	"require": {
 		"php": ">=7.4",
