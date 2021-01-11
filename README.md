@@ -2,7 +2,7 @@
 
 Strava club progress tracker/dashboard generator, uses [StravaPHP](https://github.com/basvandorst/StravaPHP/) to interface with the Strava API and total club members' stats. Generates views including club totals, individual leaders, club rosters and individuals' activity details.
 
-Here's an [example screenshot](example/summary.png?raw=true) of a main summary page, and of a club member's [activity detail](example/person_detail.png?raw=true) page.
+Here's an [example screenshot](example/index.png?raw=true) of a main summary page, and of a club member's [activity detail](example/person_detail.png?raw=true) page.
 
 ## Why?
 
