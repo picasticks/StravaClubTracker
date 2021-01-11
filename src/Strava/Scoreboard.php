@@ -249,7 +249,7 @@ class Scoreboard {
 		foreach ($activities as $place => $row) {
 			if ($place == $limit) break;
 			$html[] = sprintf(
-				'<tr><th><img src="%s" style="height:20px"><a href="%s">%s</a></th><td class="numeric">%s</td><td>%s</td><td>%s</td></tr>',
+				'<tr><th><img alt="logo" src="%s" style="height:20px"><a href="%s">%s</a></th><td class="numeric">%s</td><td>%s</td><td>%s</td></tr>',
 				$this->filterClubImage($this->resultsData[($row[2])]['profile_medium'], $row[2]), $this->getPersonURL($row[2], $row[3]), ucfirst($row[3]), number_format($row[1], 1), $this->formatDate($row[4]), $row[5]);
 		}
 		$html[] = '</tbody></table></div>';
@@ -277,7 +277,7 @@ class Scoreboard {
 		foreach ($leaders as $place => $row) {
 			if ($place == $limit) break;
 			$html[] = sprintf(
-				'<tr><th><img src="%s" style="height:20px"><a href="%s">%s</a></th><td class="numeric">%s</td></tr>',
+				'<tr><th><img alt="logo" src="%s" style="height:20px"><a href="%s">%s</a></th><td class="numeric">%s</td></tr>',
 				$this->filterClubImage($this->resultsData[($row[1])]['profile_medium'], $row[1]), $this->getPersonURL($row[1], $row[2]), ucfirst($row[2]), number_format($row[0], 1));
 		}
 		$html[] = '</tbody></table></div>';
@@ -297,7 +297,7 @@ class Scoreboard {
 	 */
 	public function getPersonHTML(int $clubId, string $person): string {
 		$html[] = sprintf(
-			'<h3 id="%d"><a href="https://www.strava.com/clubs/%s"><img src="%s"></a> %s</h3>',
+			'<h3 id="%d"><a href="https://www.strava.com/clubs/%s"><img alt="logo" src="%s"></a> %s</h3>',
 			$clubId, (empty($this->resultsData[$clubId]['url']) ? (string) $clubId : $this->resultsData[$clubId]['url']), $this->filterClubImage($this->resultsData[$clubId]['profile'], $clubId), ucfirst($person));
 		$html[] = '<table class="athlete"><tbody><tr><th>Date</th><th>Event</th><th>Description</th><th class="numeric">Duration</th><th class="numeric">'.key($this->distanceUnit).'</th><th class="numeric">'.key($this->distanceUnit).' (Adjusted)</th></tr>';
 		foreach ($this->resultsData[$clubId]['athletes'][$person]['activities'] as $activity) {
@@ -326,7 +326,7 @@ class Scoreboard {
 	public function getClubHTML(int $clubId): string {
 		$club = $this->resultsData[$clubId];
 		$html[] = sprintf(
-			'<h3 id="%d"><a href="https://www.strava.com/clubs/%s"><img src="%s"> %s</a></h3>',
+			'<h3 id="%d"><a href="https://www.strava.com/clubs/%s"><img alt="logo" src="%s"> %s</a></h3>',
 			$clubId, (empty($this->resultsData[$clubId]['url']) ? (string) $clubId : $this->resultsData[$clubId]['url']), $this->filterClubImage($club['profile'], $clubId), $club['name']);
 		$html[] = sprintf('<table class="club"><tbody><tr><th>Athlete</th><th>Event</th><th class="numeric">Hours</th><th class="numeric">%s</th><th class="numeric">Total</th><th>Top Effort</th><th class="numeric">Total (Adjusted)</th></tr>', key($this->distanceUnit));
 		foreach ($club['athletes'] as $name => $data) {
@@ -392,7 +392,7 @@ class Scoreboard {
 		$html[] = '<th class="numeric">Total</th><th class="numeric">Total (Adjusted)</th></tr>';
 		foreach (array_keys($this->resultsData) as $place => $clubId) {
 			$html[] = sprintf(
-				'<tr><th>%d.</th><th><img src="%s" style="height:20px"><a href="#%d">%s</a></th>',
+				'<tr><th>%d.</th><th><img alt="logo" src="%s" style="height:20px"><a href="#%d">%s</a></th>',
 				$place + 1, $this->filterClubImage($this->resultsData[$clubId]['profile_medium'], $clubId), $clubId, $this->resultsData[$clubId]['name']);
 			foreach ($sports as $sport) {
 				$html[] = sprintf(

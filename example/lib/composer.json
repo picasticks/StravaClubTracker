@@ -1,0 +1,6 @@
+{
+	"require": {
+		"picasticks/stravaclubscoreboard": "dev-main"
+	},
+	"minimum-stability": "dev"
+}

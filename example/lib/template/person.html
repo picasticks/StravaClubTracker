@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Example Challenge Scoreboard</title>
+<style>
+  body { color: #000; font-family: Arial, sans-serif; display: grid; grid-template: auto 1fr auto / 100%; min-height: 100vh; margin: 0; }
+  a { text-decoration: none; color: inherit; }
+  a:hover { text-decoration: underline; }
+  h1 { margin: 0; }
+  h2 { clear: left; margin: 1em 0 .5em; }
+  h3 { margin: .5em 0; }
+  header, footer { background: #1e4198; color: white; padding: 1em; }
+  header h2 { margin: .5em 0 0; }
+  main { padding: 1em; }
+  div.bar:after { clear: left; content: ""; display: block; }
+  h3 img { min-height: 124px; min-width: 124px; }
+  img { border-radius: 10%; }
+  table { border-collapse: collapse; margin: 0 0 1.5em; }
+  tr { border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; }
+  tr:first-child, tr:last-child { border-top: 1px solid #333; border-bottom: 1px solid #333; }
+  th, td { max-width: 25em; padding: .5em 1em; text-align: left; vertical-align: top; }
+  th.numeric, td.numeric { text-align: right; }
+  .athlete th:last-child:hover::after, .club th:last-child:hover::after, .standings th:last-child:hover::after { content: " (Bike miles are divided by 4)"; color: #c00; background: #fff; position: absolute; }
+  .athlete td:first-child { white-space: nowrap; }
+  img, .activities, .leaders { float: left; margin: 0 1em 0 0; }
+  .activities, .leaders { margin-bottom: 1px; }
+  .activities h3, .leaders h3 { margin-top: 0; }
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1><a href="{{homeurl}}">Example Challenge Scoreboard</a></h1>
+</header>
+
+<main>
+  <p>Our progress board refreshes daily to avoid slamming the Strava API. No mid-day updates. :(</p>
+  <p><strong>Something missing?</strong> If a single activity is missing, you probably need to edit the activity and change its visibility in Strava. Contact your club captain for details.</p>
+
+{{content}}
+
+  <p><strong>Last update:</strong> {{timestamp}}</p>
+</main>
+
+<footer>
+	<p>&copy; Copyright 2021</p>
+</footer>
+
+</body>
+</html>
