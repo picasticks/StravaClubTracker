@@ -19,12 +19,11 @@ $clubs = array(
 	123456,
 	123456,
 	123456,
-	123456,
 );
 
 // Set start and end date
-$startDate = '2020-12-01';
-$endDate   = '2020-12-31';
+$startDate = '2021-01-01';
+$endDate   = '2021-01-03';
 
 // Set a TZ for date calculations
 date_default_timezone_set('America/New_York');
