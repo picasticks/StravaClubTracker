@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace picasticks\Strava;
 
-class ScoreboardException extends \Exception { }
+class ClubTrackerException extends \Exception { }
 
-class Scoreboard {
+class ClubTracker {
 	/**
 	 * @var Distance unit to use and length in meters. e.g. 'Miles' => 1609.344 or 'KM' => 1000
 	 * @type array(string 'label' => (float) meters)
@@ -16,19 +16,19 @@ class Scoreboard {
 	);
 
 	/**
-	 * @var Whether to score manually added Strava activities that lack GPS data
+	 * @var Whether to count manually added Strava activities that lack GPS data
 	 * @type int
 	 */
 	public bool $allowManual = false;
 
 	/**
-	 * @var Array of sports to include and scoring rules for sports
+	 * @var Array of sports to include and formatting/counting rules for sports
 	 * @type array of sport ID => attributes
 	 */
 	protected array $sports = array();
 
 	/**
-	 * @var Whitelist of activities that should be scored and bypass sanity checks
+	 * @var Whitelist of activities that are always counted, bypassing sanity checks
 	 * @type array of activity IDs
 	 */
 	protected array $activityWhitelist = array();
@@ -70,14 +70,14 @@ class Scoreboard {
 	}
 
 	/**
-	 * Add or set a sport, including label and scoring rules
+	 * Add or set a sport, including label and totaling rules
 	 *
 	 * Attributes may include:
 	 *   string $label (optional) to use for sport name in formatted output (if not set, $sportId is used).
 	 *   string $convertTo (optional) sport ID of another sport to which this sport ID's activities should be converted. Use to combine multiple Strava sports together for simplified reporting, e.g. to merge "Walk" and "Hike".
-	 *   float $multiplyScoreBy (optional) Multiplier to apply to distance to compute score. e.g. setting Ride to 0.25 and Walk to 1 means each Walk mile is scored the same as 4 Ride miles.
-	 *   float $maxSpeed (optional) Maximum speed for a single activity for a sport, in distance units per hour. Activities that exceed this limit are scored as 0.
-	 *   float $distanceLimit (optional) Hard distance limit for a single activity for a sport. Activities that exceed this limit are scored as $distanceLimit.
+	 *   float $distanceMultiplier (optional) Multiplier to apply to distance to compute adjusted total. e.g. setting Ride to 0.25 and Walk to 1 means each Walk mile is counted the same as 4 Ride miles.
+	 *   float $maxSpeed (optional) Maximum speed for a single activity for a sport, in distance units per hour. Activities that exceed this limit are counted as 0 (the user should edit them in Strava and either set the correct activity type, or edit the activity to remove distance covered in a vehicle).
+	 *   float $distanceLimit (optional) Hard distance limit for a single activity for a sport. Activities that exceed this limit are counted up to the distanceLimit.
 	 *
 	 * @param string $sportId sport ID
 	 * @param array $attributes (optional)
@@ -88,7 +88,7 @@ class Scoreboard {
 		$types = array(
 			'label' => 'string',
 			'convertTo' => 'string',
-			'multiplyScoreBy' => 'float',
+			'distanceMultiplier' => 'float',
 			'maxSpeed' => 'float',
 			'distanceLimit' => 'float',
 		);
@@ -106,7 +106,7 @@ class Scoreboard {
 	/**
 	 * Add activity to activity whitelist
 	 *
-	 * Whitelisted activities are always scored, bypassing sanity checks
+	 * Whitelisted activities are always counted, bypassing sanity checks
 	 *
 	 * @param string $id activity ID
 	 *
@@ -135,14 +135,16 @@ class Scoreboard {
 	}
 
 	/**
-	 * Get total distance, score or moving time
+	 * Get total distance, total or moving time
 	 *
-	 * @param string $type 'distance' 'score' or 'moving_time'
+	 * Optionally filter by club, person and sport
+	 *
+	 * @param string $type 'distance' 'total' or 'moving_time'
 	 * @param int $clubId (optional) Club ID
 	 * @param string $person (optional) person name
 	 * @param string $sport (optional) sport ID
 	 *
-	 * @return mixed (float) distance or score, (int) moving_time
+	 * @return mixed (float) distance or total, (int) moving_time
 	 */
 	public function getTotal(string $type, int $clubId = null, string $person = null, string $sport = null) {
 		$totals = $this->getTotals($clubId, $person, $sport);
@@ -150,7 +152,7 @@ class Scoreboard {
 	}
 
 	/**
-	 * Get total distance, score and moving time
+	 * Get total distance, total and moving time
 	 *
 	 * Optionally filter by club, person and sport
 	 *
@@ -158,10 +160,10 @@ class Scoreboard {
 	 * @param string $person (optional) person name
 	 * @param string $sport (optional) sport ID
 	 *
-	 * @return array of: distance, score, moving_time totals
+	 * @return array of: distance, total, moving_time totals
 	 */
 	public function getTotals(int $clubId = null, string $person = null, string $sport = null): array {
-		$totals = array('distance' => (float) 0, 'score' => (float) 0, 'moving_time' => 0);
+		$totals = array('distance' => (float) 0, 'total' => (float) 0, 'moving_time' => 0);
 		foreach ($this->resultsData as $id => $club) {
 			if (is_null($clubId) || $clubId === $id) {
 				foreach ($club['athletes'] as $personName => $data) {
@@ -208,7 +210,7 @@ class Scoreboard {
 	 * @param string $person (optional) person name
 	 * @param string $sport (optional) sport ID
 	 *
-	 * @return array of activity data: score, distance, clubId, person name, date, activity name, sport
+	 * @return array of activity data: total, distance, clubId, person name, date, activity name, sport
 	 */
 	public function getTopActivities(int $clubId = null, string $person = null, string $sport = null): array {
 		$activities = array();
@@ -218,7 +220,7 @@ class Scoreboard {
 					if (is_null($person) || $person === $personName) {
 						foreach ($data['activities'] as $activity) {
 							if ((is_null($sport) || $sport === $activity['type'])) {
-								$activities[] = array($activity['score'], $activity['distance'], $id, $personName, $activity['date'], $activity['name'], $activity['type']);
+								$activities[] = array($activity['total'], $activity['distance'], $id, $personName, $activity['date'], $activity['name'], $activity['type']);
 							}
 						}
 					}
@@ -303,12 +305,12 @@ class Scoreboard {
 		foreach ($this->resultsData[$clubId]['athletes'][$person]['activities'] as $activity) {
 			$html[] = sprintf(
 				'<tr title="%s"><td>%s</td><td>%s</td><td>%s</td><td class="numeric">%s</td><td class="numeric">%s</td><td class="numeric">%s</td></tr>',
-				$activity['id'], $this->formatDate($activity['date']), $this->getLabel($activity['type']), $activity['name'], $this->formatSeconds($activity['moving_time']), number_format($activity['distance'], 1), number_format($activity['score'], 1));
+				$activity['id'], $this->formatDate($activity['date']), $this->getLabel($activity['type']), $activity['name'], $this->formatSeconds($activity['moving_time']), number_format($activity['distance'], 1), number_format($activity['total'], 1));
 		}
 		$totals = $this->getTotals($clubId, $person);
 		$html[] = sprintf(
 			'<tr><th colspan="3">Total</th><th class="numeric">%s</th><th class="numeric">%s</th><th class="numeric">%s</th></tr>',
-			$this->formatSeconds($totals['moving_time']), number_format($totals['distance'], 1), number_format($totals['score'], 1));
+			$this->formatSeconds($totals['moving_time']), number_format($totals['distance'], 1), number_format($totals['total'], 1));
 		$html[] = '</tbody></table>';
 
 		return $this->applyTemplate(array('content' => implode("\n", $html)), 'person');
@@ -339,7 +341,7 @@ class Scoreboard {
 
 				$html[] = sprintf(
 					'<td>%s</td><td class="numeric">%s</td><td class="numeric">%s</td>',
-					$this->getLabel($sport), $this->formatMinutes($totals['moving_time']), number_format($totals['distance'], 1));
+					$this->getLabel($sport), $this->formatHours($totals['moving_time']), number_format($totals['distance'], 1));
 
 				if ($row == 1) {
 					$activities = $this->getTopActivities($clubId, $name);
@@ -353,7 +355,7 @@ class Scoreboard {
 
 					$html[] = sprintf(
 						'<td class="numeric" rowspan="%d">%s</td><td rowspan="%d">%s</td><th class="numeric" rowspan="%d">%s</th>',
-						$rows, number_format($this->getTotal('distance', $clubId, $name), 1), $rows, $top, $rows, number_format($this->getTotal('score', $clubId, $name), 1));
+						$rows, number_format($this->getTotal('distance', $clubId, $name), 1), $rows, $top, $rows, number_format($this->getTotal('total', $clubId, $name), 1));
 				}
 
 				$html[] = '</tr>';
@@ -363,27 +365,27 @@ class Scoreboard {
 		$totals = $this->getTotals($clubId);
 		$html[] = sprintf(
 			'<tr><th>Club Total</th><th></th><th class="numeric">%s</th><th></th><th class="numeric">%s</th><th></th><th class="numeric">%s</th></tr>',
-			$this->formatMinutes($totals['moving_time']), number_format($totals['distance'], 1), number_format($totals['score'], 1));
+			$this->formatHours($totals['moving_time']), number_format($totals['distance'], 1), number_format($totals['total'], 1));
 		$html[] = '</tbody></table>';
 
 		return $this->applyTemplate(array('content' => implode("\n", $html)), 'club');
 	}
 
 	/**
-	 * Returns HTML club scoreboard
+	 * Returns main HTML summary tables
 	 *
 	 * Includes standings, top individual performances, club totals
 	 *
-	 * Applies template name 'scoreboard'
+	 * Applies template name 'summary'
 	 *
 	 * @return string HTML
 	 */
-	public function getScoreboardHTML(): string {
-		// Main scoreboard
-		// First, build array of which sports should be included because not all sports will have actual scored distance logged
+	public function getSummaryHTML(): string {
+		// Club totals
+		// First, build array of which sports should be included because not all sports will have actual distance logged
 		$sports = array();
 		foreach (array_keys($this->sports) as $sport) {
-			if ($this->getTotal('score', null, null, $sport) > 0)
+			if ($this->getTotal('total', null, null, $sport) > 0)
 				$sports[] = $sport;
 		}
 		$html[] = '<table class="standings"><tbody><tr><th colspan="2">Club</th>';
@@ -401,7 +403,7 @@ class Scoreboard {
 			}
 			$html[] = sprintf(
 				'<td class="numeric">%s</td><th class="numeric">%s</th></tr>',
-				number_format($this->getTotal('distance', $clubId), 1), number_format($this->getTotal('score', $clubId), 1));
+				number_format($this->getTotal('distance', $clubId), 1), number_format($this->getTotal('total', $clubId), 1));
 		}
 		$totaltotals = $this->getTotals();
 		$html[] = '<tr><th colspan="2">Totals</th>';
@@ -412,7 +414,7 @@ class Scoreboard {
 		}
 		$html[] = sprintf(
 			'<td class="numeric">%s</td><th class="numeric">%s</th></tr>',
-			number_format($totaltotals['distance'], 1), number_format($totaltotals['score'], 1));
+			number_format($totaltotals['distance'], 1), number_format($totaltotals['total'], 1));
 		$html[] = '</tbody></table>';
 
 		// Leaders and top activities for each sport
@@ -423,7 +425,7 @@ class Scoreboard {
 			$activities[] = $this->getTopActivitiesHTML($sport);
 		}
 
-		// Club scoreboard for each club
+		// Club totals for each club
 		$clubs = array();
 		foreach (array_keys($this->resultsData) as $clubId)
 			$clubs[] = $this->getClubHTML($clubId);
@@ -432,11 +434,11 @@ class Scoreboard {
 			'homeurl' => './',
 			'distance' => round($totaltotals['distance']),
 			'moving_time' => round($totaltotals['moving_time'] / 3600),
-			'scoreboard' => implode("\n", $html),
+			'summary' => implode("\n", $html),
 			'leaders' => implode("\n", $leaders),
 			'activities' => implode("\n", $activities),
 			'clubs' => implode("\n", $clubs),
-		), 'scoreboard');
+		), 'summary');
 	}
 
 	/**
@@ -475,7 +477,7 @@ class Scoreboard {
 	/**
 	 * Load activity data from disk (downloaded JSON responses)
 	 *
-	 * Calculates scores and stores as hierarchical data structure of all activities grouped by club and athlete.
+	 * Calculates totals and stores as hierarchical data structure of all activities grouped by club and athlete.
 	 *
 	 * Sets $this->start and $this->end using activity dates.
 	 *
@@ -508,11 +510,11 @@ class Scoreboard {
 						// Since there is no "activity ID" construct a key based on mostly immutable values for the activity
 						$id = sha1(sprintf('%d%s%s%f%s%d%d%f', $clubId, $name, $date, $distance, $sport, $activity['moving_time'], $activity['elapsed_time'], $activity['total_elevation_gain']));
 
-						// compute $score
-						$score = $this->computeScore($id, $distance, $sport, $activity['moving_time'], $activity['elapsed_time']);
+						// compute $total
+						$total = $this->adjustDistance($id, $distance, $sport, $activity['moving_time'], $activity['elapsed_time']);
 
 						// Append activity to activity log for each athlete
-						$club[$name]['activities'][] = array_merge($activity, array('type' => $sport, 'distance' => $distance, 'date' => $date, 'score' => $score, 'id' => $id));
+						$club[$name]['activities'][] = array_merge($activity, array('type' => $sport, 'distance' => $distance, 'date' => $date, 'total' => $total, 'id' => $id));
 
 						// Add to running totals for each athlete for each sport
 						if (!isset($club[$name]['totals']))
@@ -522,11 +524,11 @@ class Scoreboard {
 							if (isset($club[$name]['totals'][$sport])) {
 								$club[$name]['totals'][$sport]['distance'] += $distance;
 								$club[$name]['totals'][$sport]['moving_time'] += $activity['moving_time'];
-								$club[$name]['totals'][$sport]['score'] += $score;
+								$club[$name]['totals'][$sport]['total'] += $total;
 							} else {
 								$club[$name]['totals'][$sport]['distance'] = $distance;
 								$club[$name]['totals'][$sport]['moving_time'] = $activity['moving_time'];
-								$club[$name]['totals'][$sport]['score'] = $score;
+								$club[$name]['totals'][$sport]['total'] = $total;
 							}
 						}
 					}
@@ -546,21 +548,21 @@ class Scoreboard {
 			// Need to set resultsData temporarily to avoid getTotal from doing endless recursion
 			$this->resultsData[$clubId]['athletes'] = $club;
 			foreach (array_keys($club) as $name) {
-				$totals[$name] = $this->getTotal('score', $clubId, $name);
+				$totals[$name] = $this->getTotal('total', $clubId, $name);
 				// Sort totals by names of sports alphabetically so order of totals is consistent for every athlete
 				ksort($club[$name]['totals']);
 			}
 
-			// Sort athletes by adjusted score
+			// Sort athletes by adjusted totals
 			array_multisort($totals, SORT_DESC, $club);
 
 			$clubs[$clubId]['athletes'] = $club;
 		}
 
-		// Sort clubs by adjusted score
+		// Sort clubs by adjusted totals
 		$totals = array();
 		foreach (array_keys($clubs) as $clubId)
-			$totals[$clubId] = $this->getTotal('score', $clubId);
+			$totals[$clubId] = $this->getTotal('total', $clubId);
 		arsort($totals);
 
 		unset($this->resultsData);
@@ -632,7 +634,7 @@ class Scoreboard {
 	}
 
 	/**
-	 * Format seconds, used for single activities
+	 * Format seconds, used for individual activity lists
 	 *
 	 * Formats as h:mm:ss, or mm:ss when duration is less than one hour
 	 *
@@ -647,7 +649,7 @@ class Scoreboard {
 	}
 
 	/**
-	 * Format minutes, used for totals
+	 * Format hours, used for totals
 	 *
 	 * Formats as h:mm, or :mm when duration is less than one hour
 	 *
@@ -655,7 +657,7 @@ class Scoreboard {
 	 *
 	 * @return string formatted duration
 	 */
-	protected function formatMinutes(int $seconds): string {
+	protected function formatHours(int $seconds): string {
 		if ($seconds >= 3600)
 			return sprintf('%01d:%02d', ($seconds/3600),($seconds/60%60));
 		return sprintf(':%02d', ($seconds/60%60));
@@ -684,7 +686,7 @@ class Scoreboard {
 	}
 
 	/**
-	 * Calculate score for an activity based on distance, sport, moving and elapsed time
+	 * Calculate adjusted total for an activity based on distance, sport, moving and elapsed time
 	 *
 	 * @param string $id activity ID
 	 * @param float $distance distance in distance units
@@ -692,17 +694,17 @@ class Scoreboard {
 	 * @param int $moving (optional) moving time in seconds
 	 * @param int $elapsed (optional) elapsed time in seconds
 	 *
-	 * @return float score for activity
+	 * @return float adjusted distance/total for activity
 	 */
-	protected function computeScore(string $id, float $distance, string $sport, int $moving = null, int $elapsed = null): float {
+	protected function adjustDistance(string $id, float $distance, string $sport, int $moving = null, int $elapsed = null): float {
 		if (!isset($this->sports[$sport]))
 			return (float) 0;
 
-		// Calculate score
+		// Apply adjustments
 		if (isset($this->sports[$sport]['distanceLimit']))
 		   $distance = (float) min($distance, $this->sports[$sport]['distanceLimit']);
-		if (isset($this->sports[$sport]['multiplyScoreBy']))
-			$distance = (float) $distance * $this->sports[$sport]['multiplyScoreBy'];
+		if (isset($this->sports[$sport]['distanceMultiplier']))
+			$distance = (float) $distance * $this->sports[$sport]['distanceMultiplier'];
 
 		// Now some rules that attempt to enforce basic data quality and exclude obvious user errors
 		if (!in_array($id, $this->activityWhitelist, true)) {

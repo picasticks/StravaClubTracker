@@ -1,6 +1,6 @@
 {
 	"name": "picasticks/stravaclubscoreboard",
-	"description": "Strava Club scoreboard generator, uses StravaPHP with Strava API",
+	"description": "Strava Club progress tracker/dashboard generator, uses StravaPHP with the Strava API",
   "type": "library",
   "keywords": ["Strava"],
   "homepage": "https://github.com/picasticks/StravaClubScoreboard",
