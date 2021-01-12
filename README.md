@@ -18,10 +18,10 @@ As a charity fundraiser, a group I'm in held a month-long exercise challenge org
 * Generates HTML output (swappable template callback)
 * Configurable rules:
    * Configure distance units (miles, km, meters etc.)
-   * Count mileage differently for each activity (e.g. 2x for swim, 0.25x for ride)
+   * Count mileage differently for each activity (e.g. 2x for Swim, 0.25x for Ride)
    * Combine multiple activity types (e.g. combine "Walk" and "Hike", or "Ride" and "VirtualRide")
    * Customize activity labels
-   * Data quality/sanity checks for speed and duration, for when people inevitably forget to stop Strava and get in a car or a sofa. Changes 2 mph "Runs" to Walks, etc.
+   * Data quality/sanity checks for speed and duration, for when people inevitably forget to stop Strava and get in a car or a sofa. Changes 2 mph "runs" to walks, etc.
 * Class methods to return totals and structured data
 * CSV export
 
@@ -29,18 +29,18 @@ As a charity fundraiser, a group I'm in held a month-long exercise challenge org
 
 This library includes a simple example implementation. In Strava, you'll need to have at least one club set up, with club members and completed activities (rides, runs, etc.). You'll need Strava API credentials.
 
-To bootstrap the example:
+Next, to bootstrap the example:
 
-1. Copy the `example` directory to a new project directory.
+1. Copy the `example` directory and its contents to a new project directory.
 
-2. Change to the `lib` directory and use [Composer](https://getcomposer.org/) to install the library and dependencies:
+2. Change to the `lib` directory and use [Composer](https://getcomposer.org/) to install the library and its dependencies:
 
 ```
 cd lib
 composer install
 ```
 
-3. Edit [`htdocs/example_update.php`](example/htdocs/example_update.php) and set the list of Strava Club IDs, start and end date, Strava API credentials and https callback URI. It's best to start with a start/end period of just a few days.
+3. Edit [`htdocs/example_update.php`](example/htdocs/example_update.php) and set the list of Strava Club IDs, start and end date, Strava API credentials and https callback URI. It's best to start by testing with a start/end period of just a few days.
 
 4. Load `example_update.php` via https in a browser and click the link. It will obtain OAuth authorization from Strava and use the Strava API to download club data to the `json` directory.
 
@@ -52,7 +52,7 @@ composer install
 php build.php
 ```
 
-Needless to say, this example application isn't production quality and doesn't include access or authorization controls, it's meant for demo use only! It's split into two parts so that you can edit and rerun `build.php` offline many times to test the library's functionality and API syntax.
+Needless to say, this example application isn't production quality and doesn't include access or authorization controls, it's meant for demo use only! It's split into two parts so that you can edit and rerun `build.php` offline many times to play with the generator functionality and syntax.
 
 ## A note on Strava permissions and club/person/activity visibility
 
@@ -64,9 +64,9 @@ If a club member's activities don't show up, they should check their visibility 
 
 This software library is provided under the terms of the GNU GPL. See [LICENSE](LICENSE?raw=true) for details.
 
-This library is intended to be used only for applications that fully comply with [Strava's Terms of Service](https://www.strava.com/legal/terms) and other terms, including its privacy policy and API agreement. Of note, Strava's [API Agreement](https://www.strava.com/legal/api) states that the API should not be used to enable virtual races or competitions, or to replicate Strava sites, services or products. While I don't think this library would be particularly useful for any of those, if you're thinking of adapting it for a non-permitted use, please don't.
+This library is designed to be used by applications that comply with [Strava's Terms of Service](https://www.strava.com/legal/terms) and other terms, including its privacy policy and API agreement. Of note, Strava's [API Agreement](https://www.strava.com/legal/api) states that the API should not be used to enable virtual races or competitions, or to replicate Strava sites, services or products. While I don't think this library would be particularly useful for any of those, if you're thinking of adapting it for a non-permitted use, please don't.
 
-This isn't legal advice, but please consider carefully both Strava's policies and your club members' privacy and their preferences for the visibility of their information. For example, if a club member is only sharing activities with followers, their information must not be displayed to anyone else.
+<hr />
 
 # Class documentation
 
@@ -688,10 +688,15 @@ public setSport (string $sportId, array $attributes)
 Add or set a sport, including label and totaling rules
 
 Attributes may include:
+
 string $label (optional) to use for sport name in formatted output (if not set, $sportId is used).
+
 string $convertTo (optional) sport ID of another sport to which this sport ID's activities should be converted. Use to combine multiple Strava sports together for simplified reporting, e.g. to merge "Walk" and "Hike".
+
 float $distanceMultiplier (optional) Multiplier to apply to distance to compute adjusted total. e.g. setting Ride to 0.25 and Walk to 1 means each Walk mile is counted the same as 4 Ride miles.
+
 float $maxSpeed (optional) Maximum speed for a single activity for a sport, in distance units per hour. Activities that exceed this limit are counted as 0 (the user should edit them in Strava and either set the correct activity type, or edit the activity to remove distance covered in a vehicle).
+
 float $distanceLimit (optional) Hard distance limit for a single activity for a sport. Activities that exceed this limit are counted up to the distanceLimit.
 
 **Parameters**
