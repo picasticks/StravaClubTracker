@@ -12,7 +12,7 @@ use Strava\API\OAuth;
 
 require_once '../lib/vendor/autoload.php';
 
-// Define list of Strava Club IDs to include
+// Define list of Strava Club IDs to track
 $clubs = array(
 	123456,
 	123456,
@@ -21,12 +21,12 @@ $clubs = array(
 	123456,
 );
 
-// Set start and end date
-$startDate = '2021-01-01';
-$endDate   = '2021-01-03';
-
 // Set a TZ for date calculations
 date_default_timezone_set('America/New_York');
+
+// Set start and end date for tracking
+$startDate = '2021-01-01';
+$endDate   = '2021-01-03';
 
 // Replace with your Strava API credentials and the URI of this script
 $oauth = new OAuth([
@@ -49,13 +49,13 @@ if (!isset($_GET['code'])) {
 	$club = new Club(dirname(__DIR__).'/json');
 	$club->setClient(new Client($service));
 
-	// Override library's default Strava API request limit (default is 100)
+	// Uncomment to override library's default Strava API request limit (default is 100)
 	//$club->requestLimit = 42;
 
-	// Set logger to null to skip logging
+	// Uncomment to set logger to null to skip logging
 	//$club->logger = null;
 
-	// Set start and end timestamps. Set end to earliest of most recent complete day (yesterday) or $endDate.
+	// Compute start/end timestamps from start/end dates. Set end date to no later than yesterday.
 	$start = strtotime($startDate);
 	$end = min(strtotime($endDate), (strtotime(date('Y-m-d')) - 86400));
 	$club->log('Updating using date range '.date('Y-m-d', $start).' to '.date('Y-m-d', $end));
@@ -63,7 +63,7 @@ if (!isset($_GET['code'])) {
 	// Download data from Strava. Only downloads when local files aren't already present.
 	try {
 		foreach ($clubs as $clubId) {
-			// Get club details
+			// Get club info
 			$club->downloadClub($clubId);
 
 			// Get club activities for each day between $start and $end
