@@ -12,17 +12,17 @@ As a charity fundraiser, a group I'm in held a month-long exercise challenge org
 
 * Track one club or a group of clubs
 * Club totals by activity and across activities
-* Highlight top efforts
-* Highlight individual leaders
-* Club rosters and individual activity details so participants can confirm at a glance that their activities were included
+* Highlights top efforts
+* Highlights individual leaders
+* Club rosters and individual activity details, so participants can confirm at a glance that their activities were included
 * Generates HTML output (swappable template callback)
 * Configurable rules:
    * Configure distance units (miles, km, meters etc.)
    * Count mileage differently for each activity (e.g. 2x for swim, 0.25x for ride)
    * Combine multiple activity types (e.g. combine "Walk" and "Hike", or "Ride" and "VirtualRide")
    * Customize activity labels
-   * Data quality/sanity checks for speed and duration when people inevitably forget to stop Strava and get in a car or a sofa, change 2 mph "Runs" to Walks etc.
-* Class methods to return totals and structured data, which can be easily json_encoded for alternate visualization
+   * Data quality/sanity checks for speed and duration, for when people inevitably forget to stop Strava and get in a car or a sofa. Changes 2 mph "Runs" to Walks, etc.
+* Class methods to return totals and structured data
 * CSV export
 
 ## Quick start
@@ -56,7 +56,9 @@ Needless to say, this example application isn't production quality and doesn't i
 
 ## A note on Strava permissions and club/person/activity visibility
 
-Strava manages visibility of club details, members and activities according to its security and privacy policies. In order for club members to be included and their activities counted, each member must make their activities visible to your application's user. For example, a member could make activities visible to all users (currently, Strava's default setting), or only to Followers, and then accept your user as a Follower. If a club member's activities don't show up, they should check their visibility settings in Strava and make sure they've made those activities visible to the club member user running your application.
+Strava manages visibility of club details, members and activities according to its security and privacy policies. In order for club members to be included and their activities counted, each member must make their activities visible to your application's user. For example, a member could make activities visible to all users (currently, Strava's default setting), or only to Followers, and then accept your user as a Follower.
+
+If a club member's activities don't show up, they should check their visibility settings in Strava and make sure they've made those activities visible to the club member user running your application.
 
 ## Legal
 
@@ -68,7 +70,12 @@ This isn't legal advice, but please consider carefully both Strava's policies an
 
 # Class documentation
 
-## picasticks\Strava\Club  
+## picasticks\Strava
+
+* [Club](#picasticksstravaclub)
+* [ClubTracker](#picasticksstravaclubtracker)
+
+## picasticks\Strava\Club
 
 ### Methods
 
@@ -83,7 +90,7 @@ This isn't legal advice, but please consider carefully both Strava's policies an
 |[log](#clublog)|Log message using $this-logger|
 |[setClient](#clubsetclient)|Set Strava API Client instance|
 
-#### Club::__construct  
+#### Club::__construct
 
 **Description**
 
@@ -91,14 +98,12 @@ This isn't legal advice, but please consider carefully both Strava's policies an
 public __construct (string $storageDir)
 ```
 
-Constructor 
-
- 
+Constructor
 
 **Parameters**
 
 * `(string) $storageDir`
-: filesystem directory to store downloaded JSON files  
+: filesystem directory to store downloaded JSON files
 
 **Return Values**
 
@@ -106,7 +111,7 @@ Constructor
 
 <hr />
 
-#### Club::downloadClub  
+#### Club::downloadClub
 
 **Description**
 
@@ -114,14 +119,12 @@ Constructor
 public downloadClub (int $clubId)
 ```
 
-Downloads club details from Strava 
-
- 
+Downloads club details from Strava
 
 **Parameters**
 
 * `(int) $clubId`
-: Club ID  
+: Club ID
 
 **Return Values**
 
@@ -129,7 +132,7 @@ Downloads club details from Strava
 
 <hr />
 
-#### Club::downloadClubActivities  
+#### Club::downloadClubActivities
 
 **Description**
 
@@ -137,18 +140,16 @@ Downloads club details from Strava
 public downloadClubActivities (int $clubId, int $start, int $end)
 ```
 
-Downloads club activity data from Strava 
-
- 
+Downloads club activity data from Strava
 
 **Parameters**
 
 * `(int) $clubId`
-: Club ID  
+: Club ID
 * `(int) $start`
-: Start date (UNIX timestamp)  
+: Start date (UNIX timestamp)
 * `(int) $end`
-: End date (UNIX timestamp)  
+: End date (UNIX timestamp)
 
 **Return Values**
 
@@ -156,7 +157,7 @@ Downloads club activity data from Strava
 
 <hr />
 
-#### Club::getClubFilenames  
+#### Club::getClubFilenames
 
 **Description**
 
@@ -164,9 +165,7 @@ Downloads club activity data from Strava
 public getClubFilenames (void)
 ```
 
-Get array of club data files 
-
- 
+Get array of club data files
 
 **Parameters**
 
@@ -180,7 +179,7 @@ Get array of club data files
 
 <hr />
 
-#### Club::getDataFilenames  
+#### Club::getDataFilenames
 
 **Description**
 
@@ -188,14 +187,12 @@ Get array of club data files
 public getDataFilenames (int $clubId)
 ```
 
-Get map of club activity data files and timestamps 
-
- 
+Get map of club activity data files and timestamps
 
 **Parameters**
 
 * `(int) $clubId`
-: Club ID  
+: Club ID
 
 **Return Values**
 
@@ -205,7 +202,7 @@ Get map of club activity data files and timestamps
 
 <hr />
 
-#### Club::getRequestCount  
+#### Club::getRequestCount
 
 **Description**
 
@@ -213,9 +210,7 @@ Get map of club activity data files and timestamps
 public getRequestCount (void)
 ```
 
-Get count of current number of API requests to Strava 
-
- 
+Get count of current number of API requests to Strava
 
 **Parameters**
 
@@ -229,7 +224,7 @@ Get count of current number of API requests to Strava
 
 <hr />
 
-#### Club::log  
+#### Club::log
 
 **Description**
 
@@ -237,16 +232,14 @@ Get count of current number of API requests to Strava
 public log (string $msg, int|null $error_type)
 ```
 
-Log message using $this-logger 
-
- 
+Log message using $this-logger
 
 **Parameters**
 
 * `(string) $msg`
-: message  
+: message
 * `(int|null) $error_type`
-: (optional) PHP error type  
+: (optional) PHP error type
 
 **Return Values**
 
@@ -254,7 +247,7 @@ Log message using $this-logger
 
 <hr />
 
-#### Club::setClient  
+#### Club::setClient
 
 **Description**
 
@@ -262,14 +255,12 @@ Log message using $this-logger
 public setClient (Client $client)
 ```
 
-Set Strava API Client instance 
-
- 
+Set Strava API Client instance
 
 **Parameters**
 
 * `(Client) $client`
-: instance  
+: instance
 
 **Return Values**
 
@@ -277,7 +268,7 @@ Set Strava API Client instance
 
 <hr />
 
-## picasticks\Strava\ClubTracker  
+## picasticks\Strava\ClubTracker
 
 ### Methods
 
@@ -302,7 +293,7 @@ Set Strava API Client instance
 |[setTemplateFunction](#clubtrackersettemplatefunction)|Set template function|
 |[whitelistActivity](#clubtrackerwhitelistactivity)|Add activity to activity whitelist|
 
-#### ClubTracker::__construct  
+#### ClubTracker::__construct
 
 **Description**
 
@@ -310,14 +301,12 @@ Set Strava API Client instance
 public __construct (Club $data)
 ```
 
-Constructor 
-
- 
+Constructor
 
 **Parameters**
 
 * `(Club) $data`
-: Club instance object  
+: Club instance object
 
 **Return Values**
 
@@ -325,7 +314,7 @@ Constructor
 
 <hr />
 
-#### ClubTracker::getCSV  
+#### ClubTracker::getCSV
 
 **Description**
 
@@ -333,9 +322,9 @@ Constructor
 public getCSV (void)
 ```
 
-Returns all activity data in CSV format 
+Returns all activity data in CSV format
 
-Includes header row 
+Includes header row
 
 **Parameters**
 
@@ -349,7 +338,7 @@ Includes header row
 
 <hr />
 
-#### ClubTracker::getClubHTML  
+#### ClubTracker::getClubHTML
 
 **Description**
 
@@ -357,14 +346,14 @@ Includes header row
 public getClubHTML (int $clubId)
 ```
 
-Returns HTML club roster and totals for a club 
+Returns HTML club roster and totals for a club
 
-Applies template name 'club' 
+Applies template name 'club'
 
 **Parameters**
 
 * `(int) $clubId`
-: Club ID  
+: Club ID
 
 **Return Values**
 
@@ -374,7 +363,7 @@ Applies template name 'club'
 
 <hr />
 
-#### ClubTracker::getClubs  
+#### ClubTracker::getClubs
 
 **Description**
 
@@ -382,9 +371,7 @@ Applies template name 'club'
 public getClubs (void)
 ```
 
-Return array of clubs and club attributes 
-
- 
+Return array of clubs and club attributes
 
 **Parameters**
 
@@ -398,7 +385,7 @@ Return array of clubs and club attributes
 
 <hr />
 
-#### ClubTracker::getPersonHTML  
+#### ClubTracker::getPersonHTML
 
 **Description**
 
@@ -406,16 +393,16 @@ Return array of clubs and club attributes
 public getPersonHTML (int $clubId, string $person)
 ```
 
-Returns HTML activty log for a single athlete 
+Returns HTML activty log for a single athlete
 
-Applies template name 'person' 
+Applies template name 'person'
 
 **Parameters**
 
 * `(int) $clubId`
-: Club ID  
+: Club ID
 * `(string) $person`
-: person name  
+: person name
 
 **Return Values**
 
@@ -425,7 +412,7 @@ Applies template name 'person'
 
 <hr />
 
-#### ClubTracker::getPersonHTMLFilename  
+#### ClubTracker::getPersonHTMLFilename
 
 **Description**
 
@@ -433,18 +420,16 @@ Applies template name 'person'
 public getPersonHTMLFilename (string $baseDir, int $clubId, string $person)
 ```
 
-Get filesystem path for HTML page showing person activity details 
-
- 
+Get filesystem path for HTML page showing person activity details
 
 **Parameters**
 
 * `(string) $baseDir`
-: Filesystem base directory  
+: Filesystem base directory
 * `(int) $clubId`
-: Club ID  
+: Club ID
 * `(string) $person`
-: person name  
+: person name
 
 **Return Values**
 
@@ -454,7 +439,7 @@ Get filesystem path for HTML page showing person activity details
 
 <hr />
 
-#### ClubTracker::getResults  
+#### ClubTracker::getResults
 
 **Description**
 
@@ -462,9 +447,7 @@ Get filesystem path for HTML page showing person activity details
 public getResults (void)
 ```
 
-Return hierarchical data structure of all activities grouped by club and athlete 
-
- 
+Return hierarchical data structure of all activities grouped by club and athlete
 
 **Parameters**
 
@@ -478,7 +461,7 @@ Return hierarchical data structure of all activities grouped by club and athlete
 
 <hr />
 
-#### ClubTracker::getSportLeaders  
+#### ClubTracker::getSportLeaders
 
 **Description**
 
@@ -486,14 +469,12 @@ Return hierarchical data structure of all activities grouped by club and athlete
 public getSportLeaders (string $sport)
 ```
 
-Get ranked list of leaders for a sport/activity type 
-
- 
+Get ranked list of leaders for a sport/activity type
 
 **Parameters**
 
 * `(string) $sport`
-: sport ID  
+: sport ID
 
 **Return Values**
 
@@ -503,7 +484,7 @@ Get ranked list of leaders for a sport/activity type
 
 <hr />
 
-#### ClubTracker::getSportLeadersHTML  
+#### ClubTracker::getSportLeadersHTML
 
 **Description**
 
@@ -511,16 +492,16 @@ Get ranked list of leaders for a sport/activity type
 public getSportLeadersHTML (string $sport, int $limit)
 ```
 
-Returns HTML table of leaders for a sport 
+Returns HTML table of leaders for a sport
 
-Applies template name 'leaders' 
+Applies template name 'leaders'
 
 **Parameters**
 
 * `(string) $sport`
-: sport ID  
+: sport ID
 * `(int) $limit`
-: (optional) number of athletes to include (defaults to top 5)  
+: (optional) number of athletes to include (defaults to top 5)
 
 **Return Values**
 
@@ -530,7 +511,7 @@ Applies template name 'leaders'
 
 <hr />
 
-#### ClubTracker::getSummaryHTML  
+#### ClubTracker::getSummaryHTML
 
 **Description**
 
@@ -538,11 +519,11 @@ Applies template name 'leaders'
 public getSummaryHTML (void)
 ```
 
-Returns main HTML summary tables 
+Returns main HTML summary tables
 
-Includes standings, top individual performances, club totals  
-  
-Applies template name 'index' 
+Includes standings, top individual performances, club totals
+
+Applies template name 'index'
 
 **Parameters**
 
@@ -556,7 +537,7 @@ Applies template name 'index'
 
 <hr />
 
-#### ClubTracker::getTopActivities  
+#### ClubTracker::getTopActivities
 
 **Description**
 
@@ -564,18 +545,18 @@ Applies template name 'index'
 public getTopActivities (int $clubId, string $person, string $sport)
 ```
 
-Get ranked list of top activities 
+Get ranked list of top activities
 
-Optionally filter by club, person and sport 
+Optionally filter by club, person and sport
 
 **Parameters**
 
 * `(int) $clubId`
-: (optional) Club ID  
+: (optional) Club ID
 * `(string) $person`
-: (optional) person name  
+: (optional) person name
 * `(string) $sport`
-: (optional) sport ID  
+: (optional) sport ID
 
 **Return Values**
 
@@ -585,7 +566,7 @@ Optionally filter by club, person and sport
 
 <hr />
 
-#### ClubTracker::getTopActivitiesHTML  
+#### ClubTracker::getTopActivitiesHTML
 
 **Description**
 
@@ -593,16 +574,16 @@ Optionally filter by club, person and sport
 public getTopActivitiesHTML (string $sport, int $limit)
 ```
 
-Returns HTML table of top performances for a sport/activity type 
+Returns HTML table of top performances for a sport/activity type
 
-Applies template name 'activities' 
+Applies template name 'activities'
 
 **Parameters**
 
 * `(string) $sport`
-: sport ID  
+: sport ID
 * `(int) $limit`
-: (optional) number of athletes to include (defaults to top 5)  
+: (optional) number of athletes to include (defaults to top 5)
 
 **Return Values**
 
@@ -612,7 +593,7 @@ Applies template name 'activities'
 
 <hr />
 
-#### ClubTracker::getTotal  
+#### ClubTracker::getTotal
 
 **Description**
 
@@ -620,20 +601,20 @@ Applies template name 'activities'
 public getTotal (string $type, int $clubId, string $person, string $sport)
 ```
 
-Get total distance, total or moving time 
+Get total distance, total or moving time
 
-Optionally filter by club, person and sport 
+Optionally filter by club, person and sport
 
 **Parameters**
 
 * `(string) $type`
-: 'distance' 'total' or 'moving_time'  
+: 'distance' 'total' or 'moving_time'
 * `(int) $clubId`
-: (optional) Club ID  
+: (optional) Club ID
 * `(string) $person`
-: (optional) person name  
+: (optional) person name
 * `(string) $sport`
-: (optional) sport ID  
+: (optional) sport ID
 
 **Return Values**
 
@@ -643,7 +624,7 @@ Optionally filter by club, person and sport
 
 <hr />
 
-#### ClubTracker::getTotals  
+#### ClubTracker::getTotals
 
 **Description**
 
@@ -651,18 +632,18 @@ Optionally filter by club, person and sport
 public getTotals (int $clubId, string $person, string $sport)
 ```
 
-Get total distance, total and moving time 
+Get total distance, total and moving time
 
-Optionally filter by club, person and sport 
+Optionally filter by club, person and sport
 
 **Parameters**
 
 * `(int) $clubId`
-: (optional) Club ID  
+: (optional) Club ID
 * `(string) $person`
-: (optional) person name  
+: (optional) person name
 * `(string) $sport`
-: (optional) sport ID  
+: (optional) sport ID
 
 **Return Values**
 
@@ -672,7 +653,7 @@ Optionally filter by club, person and sport
 
 <hr />
 
-#### ClubTracker::loadActivityData  
+#### ClubTracker::loadActivityData
 
 **Description**
 
@@ -680,11 +661,11 @@ Optionally filter by club, person and sport
 public loadActivityData (void)
 ```
 
-Load activity data from disk (downloaded JSON responses) 
+Load activity data from disk (downloaded JSON responses)
 
-Calculates totals and stores as hierarchical data structure of all activities grouped by club and athlete.  
-  
-Sets $this->start and $this->end using activity dates. 
+Calculates totals and stores as hierarchical data structure of all activities grouped by club and athlete.
+
+Sets $this->start and $this->end using activity dates.
 
 **Parameters**
 
@@ -696,7 +677,7 @@ Sets $this->start and $this->end using activity dates.
 
 <hr />
 
-#### ClubTracker::setSport  
+#### ClubTracker::setSport
 
 **Description**
 
@@ -704,21 +685,21 @@ Sets $this->start and $this->end using activity dates.
 public setSport (string $sportId, array $attributes)
 ```
 
-Add or set a sport, including label and totaling rules 
+Add or set a sport, including label and totaling rules
 
-Attributes may include:  
-string $label (optional) to use for sport name in formatted output (if not set, $sportId is used).  
-string $convertTo (optional) sport ID of another sport to which this sport ID's activities should be converted. Use to combine multiple Strava sports together for simplified reporting, e.g. to merge "Walk" and "Hike".  
-float $distanceMultiplier (optional) Multiplier to apply to distance to compute adjusted total. e.g. setting Ride to 0.25 and Walk to 1 means each Walk mile is counted the same as 4 Ride miles.  
-float $maxSpeed (optional) Maximum speed for a single activity for a sport, in distance units per hour. Activities that exceed this limit are counted as 0 (the user should edit them in Strava and either set the correct activity type, or edit the activity to remove distance covered in a vehicle).  
-float $distanceLimit (optional) Hard distance limit for a single activity for a sport. Activities that exceed this limit are counted up to the distanceLimit. 
+Attributes may include:
+string $label (optional) to use for sport name in formatted output (if not set, $sportId is used).
+string $convertTo (optional) sport ID of another sport to which this sport ID's activities should be converted. Use to combine multiple Strava sports together for simplified reporting, e.g. to merge "Walk" and "Hike".
+float $distanceMultiplier (optional) Multiplier to apply to distance to compute adjusted total. e.g. setting Ride to 0.25 and Walk to 1 means each Walk mile is counted the same as 4 Ride miles.
+float $maxSpeed (optional) Maximum speed for a single activity for a sport, in distance units per hour. Activities that exceed this limit are counted as 0 (the user should edit them in Strava and either set the correct activity type, or edit the activity to remove distance covered in a vehicle).
+float $distanceLimit (optional) Hard distance limit for a single activity for a sport. Activities that exceed this limit are counted up to the distanceLimit.
 
 **Parameters**
 
 * `(string) $sportId`
-: sport ID  
+: sport ID
 * `(array) $attributes`
-: (optional)  
+: (optional)
 
 **Return Values**
 
@@ -726,7 +707,7 @@ float $distanceLimit (optional) Hard distance limit for a single activity for a 
 
 <hr />
 
-#### ClubTracker::setTemplateFunction  
+#### ClubTracker::setTemplateFunction
 
 **Description**
 
@@ -734,14 +715,12 @@ float $distanceLimit (optional) Hard distance limit for a single activity for a 
 public setTemplateFunction (callable $function)
 ```
 
-Set template function 
-
- 
+Set template function
 
 **Parameters**
 
 * `(callable) $function`
-: callable to apply array of template variables to template  
+: callable to apply array of template variables to template
 
 **Return Values**
 
@@ -749,7 +728,7 @@ Set template function
 
 <hr />
 
-#### ClubTracker::whitelistActivity  
+#### ClubTracker::whitelistActivity
 
 **Description**
 
@@ -757,14 +736,14 @@ Set template function
 public whitelistActivity (string $id)
 ```
 
-Add activity to activity whitelist 
+Add activity to activity whitelist
 
-Whitelisted activities are always counted, bypassing sanity checks 
+Whitelisted activities are always counted, bypassing sanity checks
 
 **Parameters**
 
 * `(string) $id`
-: activity ID  
+: activity ID
 
 **Return Values**
 
