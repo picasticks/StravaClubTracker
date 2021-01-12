@@ -75,6 +75,8 @@ This library is designed to be used by applications that comply with [Strava's T
 * [Club](#picasticksstravaclub)
 * [ClubTracker](#picasticksstravaclubtracker)
 
+<hr />
+
 ## picasticks\Strava\Club
 
 ### Methods

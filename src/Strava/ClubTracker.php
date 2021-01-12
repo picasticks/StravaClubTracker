@@ -73,10 +73,15 @@ class ClubTracker {
 	 * Add or set a sport, including label and totaling rules
 	 *
 	 * Attributes may include:
+	 *
 	 *   string $label (optional) to use for sport name in formatted output (if not set, $sportId is used).
+	 *
 	 *   string $convertTo (optional) sport ID of another sport to which this sport ID's activities should be converted. Use to combine multiple Strava sports together for simplified reporting, e.g. to merge "Walk" and "Hike".
+	 *
 	 *   float $distanceMultiplier (optional) Multiplier to apply to distance to compute adjusted total. e.g. setting Ride to 0.25 and Walk to 1 means each Walk mile is counted the same as 4 Ride miles.
+	 *
 	 *   float $maxSpeed (optional) Maximum speed for a single activity for a sport, in distance units per hour. Activities that exceed this limit are counted as 0 (the user should edit them in Strava and either set the correct activity type, or edit the activity to remove distance covered in a vehicle).
+	 *
 	 *   float $distanceLimit (optional) Hard distance limit for a single activity for a sport. Activities that exceed this limit are counted up to the distanceLimit.
 	 *
 	 * @param string $sportId sport ID
