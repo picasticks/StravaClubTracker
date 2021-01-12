@@ -1,3 +1,5 @@
+![banner](example/banner.png?raw=true)
+
 # Strava Club Tracker
 
 Strava club progress tracker/dashboard generator, uses [StravaPHP](https://github.com/basvandorst/StravaPHP/) to interface with the Strava API and total club members' stats. Generates views including club totals, individual leaders, club rosters and individuals' activity details.
@@ -54,7 +56,7 @@ php build.php
 
 Needless to say, this example application isn't production quality and doesn't include access or authorization controls, it's meant for demo use only! It's split into two parts so that you can edit and rerun `build.php` offline many times to play with the generator functionality and syntax.
 
-## A note on Strava permissions and club/person/activity visibility
+## Strava permissions and club/person/activity visibility
 
 Strava manages visibility of club details, members and activities according to its security and privacy policies. In order for club members to be included and their activities counted, each member must make their activities visible to your application's user. For example, a member could make activities visible to all users (currently, Strava's default setting), or only to Followers, and then accept your user as a Follower.
 
