@@ -5,6 +5,11 @@
   "keywords": ["Strava"],
   "homepage": "https://github.com/picasticks/StravaClubTracker",
   "license": "GPL-3.0-only",
+	"authors": [
+		{
+			"name": "Joel Hardi"
+		}
+	],
 	"require": {
 		"php": ">=7.4",
 		"basvandorst/stravaphp": ">=1.5"

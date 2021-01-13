@@ -64,9 +64,9 @@ If a club member's activities don't show up, they should check their visibility 
 
 ## Legal
 
-This software library is provided under the terms of the GNU GPL. See [LICENSE](LICENSE?raw=true) for details.
+This software library is protected by copyright and provided under the terms of the GNU GPL. See [LICENSE](LICENSE?raw=true) for details.
 
-This library is designed to be used by applications that comply with [Strava's Terms of Service](https://www.strava.com/legal/terms) and other terms, including its privacy policy and API agreement. Of note, Strava's [API Agreement](https://www.strava.com/legal/api) states that the API should not be used to enable virtual races or competitions, or to replicate Strava sites, services or products. While I don't think this library would be particularly useful for any of those, if you're thinking of adapting it for a non-permitted use, please don't.
+This library is designed to be used by applications that comply with [Strava's Terms of Service](https://www.strava.com/legal/terms) and other terms, including its privacy policy and API agreement. Of note, Strava's [API Agreement](https://www.strava.com/legal/api) states that the API should not be used to enable virtual races or competitions, or to replicate Strava sites, services or products. If you're thinking of adapting this library for a non-permitted use, please don't.
 
 <hr />
 
