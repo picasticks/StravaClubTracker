@@ -356,7 +356,11 @@ class ClubTracker {
 		$html[] = sprintf('<table class="club"><tbody><tr><th>Athlete</th><th>Event</th><th class="numeric">Hours</th><th class="numeric">%s</th><th class="numeric">Total</th><th>Top Effort</th><th class="numeric">Total (Adjusted)</th></tr>', key($this->distanceUnit));
 		foreach ($club['athletes'] as $name => $data) {
 			$rows = count($data['totals']);
-			$html[] = '<tr><th rowspan="'.$rows.'"><a href="'.$this->getPersonURL($clubId, $name).'">'.ucfirst($name).'</a></th>';
+			$html[] = '<tr><th rowspan="'.($rows > 0 ? $rows : 1).'"><a href="'.$this->getPersonURL($clubId, $name).'">'.ucfirst($name).'</a></th>';
+
+			if ($rows === 0)
+				$html[] = '<td></td><td></td><td></td><td></td><td></td><th class="numeric">0</th></tr>';
+
 			$row = 1;
 			foreach ($data['totals'] as $sport => $totals) {
 				if ($row > 1)
@@ -625,7 +629,8 @@ class ClubTracker {
 		$vars = array_merge(array(
 			'homeurl' => '../',
 			'distanceUnit' => key($this->distanceUnit),
-			'currentDay' => ($this->end - $this->start)/86400 + 1,
+			'currentDay' => (int) round(($this->end - $this->start)/86400) + 1,
+			'startDate' => date('F j', $this->start),
 			'currentDate' => date('F j', $this->end),
 			'timestamp' => date('D, d M Y H:i T'),
 		), $vars);
