@@ -1,10 +1,10 @@
 {
 	"name": "picasticks/stravaclubtracker",
 	"description": "Progress tracker/dashboard generator for Strava Clubs that shows club totals, top efforts, individual leaders and club details",
-  "type": "library",
-  "keywords": ["Strava"],
-  "homepage": "https://github.com/picasticks/StravaClubTracker",
-  "license": "GPL-3.0-only",
+	"type": "library",
+	"keywords": ["Strava"],
+	"homepage": "https://github.com/picasticks/StravaClubTracker",
+	"license": "GPL-3.0-only",
 	"authors": [
 		{
 			"name": "Joel Hardi"
@@ -14,10 +14,10 @@
 		"php": ">=7.4",
 		"basvandorst/stravaphp": ">=1.5"
 	},
-  "minimum-stability": "stable",
-  "autoload": {
-    "psr-4": {
-      "picasticks\\": "src/"
-    }
-  }
+	"minimum-stability": "stable",
+	"autoload": {
+		"psr-4": {
+			"picasticks\\": "src/"
+		}
+	}
 }
