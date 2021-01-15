@@ -32,14 +32,15 @@ class Client extends \Strava\API\Client {
 	 * List club activities
 	 *
 	 * @param int $id
-	 * @param int $page
-	 * @param int $per_page
-	 * @param int $after epoch timestamp in seconds
-	 * @return  array
-	 * @throws  Exception
+	 * @param int $page (optional)
+	 * @param int $per_page (optional)
+	 * @param int $after (optional) epoch timestamp to return activities after
+	 *
+	 * @throws ClientException
+	 *
+	 * @return array Club activities
 	 */
-	public function getClubActivities($id, $page = null, $per_page = null, $after = null)
-	{
+	public function getClubActivities($id, $page = null, $per_page = null, $after = null) {
 		try {
 			return $this->service->getClubActivities($id, $page, $per_page, $after);
 		} catch (ServiceException $e) {

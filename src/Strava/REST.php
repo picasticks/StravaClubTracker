@@ -25,14 +25,25 @@ namespace picasticks\Strava;
 // Extend base Client to add "after" parameter to /club/[id]/activities API call
 // "before" parameter is also valid but Strava returns an error when both "before" and "after" are set, they can't be used simultaneously with this API method
 class REST extends \Strava\API\Service\REST {
-	public function getClubActivities($id, $page = null, $per_page = null, $after = null)
-	{
-		$path = 'clubs/' . $id . '/activities';
+	/**
+	 * List club activities
+	 *
+	 * @param int $id
+	 * @param int $page (optional)
+	 * @param int $per_page (optional)
+	 * @param int $after (optional) epoch timestamp to return activities after
+	 *
+	 * @throws ClientException
+	 *
+	 * @return array Club activities
+	 */
+	public function getClubActivities($id, $page = null, $per_page = null, $after = null) {
+		$path = 'clubs/' . (int) $id . '/activities';
 		$parameters['query'] = [
-			'after' => $after,
-			'page' => $page,
-			'per_page' => $per_page,
-			'access_token' => $this->getToken(),
+			'after' => (int) $after,
+			'page' => (int) $page,
+			'per_page' => (int) $per_page,
+			'access_token' => (string) $this->getToken(),
 		];
 		return $this->getResponse('GET', $path, $parameters);
 	}
