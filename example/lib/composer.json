@@ -1,6 +1,5 @@
 {
 	"require": {
-		"picasticks/stravaclubtracker": "dev-main"
-	},
-	"minimum-stability": "dev"
+		"picasticks/stravaclubtracker": ">=1.0"
+	}
 }
