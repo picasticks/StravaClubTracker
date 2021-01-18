@@ -1,4 +1,4 @@
-name: PHP Composer
+name: PHP Composer, Symfony, Psalm build tests
 
 on:
   push:
