@@ -35,3 +35,9 @@ jobs:
 
     # - name: Run test suite
     #   run: composer run-script test
+
+    - name: The PHP Security Checker
+      uses: symfonycorp/security-checker-action@v2
+
+    - name: Psalm – Security Scanner for PHP
+      uses: psalm/psalm-github-security-scan@1.2.1
