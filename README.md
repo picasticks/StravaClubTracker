@@ -4,7 +4,7 @@
 
 Strava club progress tracker/dashboard generator, uses [StravaPHP](https://github.com/basvandorst/StravaPHP/) to interface with the Strava API and total club members' stats. Generates views including club totals, individual leaders, club rosters and individuals' activity details.
 
-Here's an [example screenshot](example/index.png?raw=true) of a main summary page, and of a club member's [activity detail](example/person_detail.png?raw=true) page.
+Here's an [example screenshot](example/index.png?raw=true) of a main summary page, and of a club member's [activity detail](example/person_detail.png?raw=true) page. Here's the [composer package](https://packagist.org/packages/picasticks/stravaclubtracker).
 
 ## Why?
 
@@ -29,9 +29,9 @@ As a charity fundraiser, a group I'm in held a month-long exercise challenge org
 
 ## Quick start
 
-This library includes a simple example implementation. In Strava, you'll need to have at least one club set up, with club members and completed activities (rides, runs, etc.). You'll need Strava API credentials.
+This library includes a simple example implementation in `/example`. In Strava, you'll need to have at least one club set up, with club members and completed activities (rides, runs, etc.). You'll need Strava API credentials.
 
-Next, to bootstrap the example:
+To bootstrap the example:
 
 1. Copy the `example` directory and its contents to a new project directory.
 
