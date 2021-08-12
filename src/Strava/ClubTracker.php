@@ -279,7 +279,7 @@ class ClubTracker {
 		}
 		$html[] = '</tbody></table></div>';
 
-		return $this->applyTemplate(array('content' => implode("\n", $html)), 'activities');
+		return $this->applyTemplate('activities', array('content' => implode("\n", $html)));
 	}
 
 	/**
@@ -307,7 +307,7 @@ class ClubTracker {
 		}
 		$html[] = '</tbody></table></div>';
 
-		return $this->applyTemplate(array('content' => implode("\n", $html)), 'leaders');
+		return $this->applyTemplate('leaders', array('content' => implode("\n", $html)));
 	}
 
 	/**
@@ -336,7 +336,7 @@ class ClubTracker {
 			$this->formatSeconds($totals['moving_time']), number_format($totals['distance'], 1), number_format($totals['total'], 1));
 		$html[] = '</tbody></table>';
 
-		return $this->applyTemplate(array('content' => implode("\n", $html)), 'person');
+		return $this->applyTemplate('person', array('content' => implode("\n", $html)));
 	}
 
 	/**
@@ -395,7 +395,7 @@ class ClubTracker {
 			$this->formatHours($totals['moving_time']), number_format($totals['distance'], 1), number_format($totals['total'], 1));
 		$html[] = '</tbody></table>';
 
-		return $this->applyTemplate(array('content' => implode("\n", $html)), 'club');
+		return $this->applyTemplate('club', array('content' => implode("\n", $html)));
 	}
 
 	/**
@@ -457,7 +457,8 @@ class ClubTracker {
 		foreach (array_keys($this->resultsData) as $clubId)
 			$clubs[] = $this->getClubHTML($clubId);
 
-		return $this->applyTemplate(array(
+		return $this->applyTemplate('index',
+			array(
 			'homeurl' => './',
 			'distance' => round($totaltotals['distance']),
 			'moving_time' => round($totaltotals['moving_time'] / 3600),
@@ -465,7 +466,7 @@ class ClubTracker {
 			'leaders' => implode("\n", $leaders),
 			'activities' => implode("\n", $activities),
 			'clubs' => implode("\n", $clubs),
-		), 'index');
+		));
 	}
 
 	/**
@@ -624,7 +625,7 @@ class ClubTracker {
 	 *
 	 * @return string output
 	 */
-	protected function applyTemplate(array $vars = array(), string $template): string {
+	protected function applyTemplate(string $template, array $vars = array()): string {
 		// Set some default values for $vars
 		$vars = array_merge(array(
 			'homeurl' => '../',
